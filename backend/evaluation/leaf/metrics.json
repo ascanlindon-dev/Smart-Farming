@@ -1,0 +1,250 @@
+{
+  "task": "leaf",
+  "status": "complete",
+  "started_at": "2026-09-16T00:02:34+08:00",
+  "updated_at": "2026-09-16T00:02:34+08:00",
+  "class_names": [
+    "algal leaf spot",
+    "anthracnose",
+    "healthy",
+    "sooty mold"
+  ],
+  "dataset_root": "C:\\wamp64\\www\\Smart Farming System (1)\\datasets\\leaf_split",
+  "model_path": "C:\\wamp64\\www\\Smart Farming System (1)\\backend\\modelkeras_leaf\\trained_leaf_disease_model.keras",
+  "epochs": [
+    {
+      "epoch": 1,
+      "stage": "training",
+      "accuracy": 0.8901013135910034,
+      "val_accuracy": 0.9927007555961609,
+      "loss": 0.2957092523574829,
+      "val_loss": 0.028187250718474388,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 2,
+      "stage": "training",
+      "accuracy": 0.9750584363937378,
+      "val_accuracy": 0.9927007555961609,
+      "loss": 0.07953348010778427,
+      "val_loss": 0.01821311004459858,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 3,
+      "stage": "training",
+      "accuracy": 0.9812938570976257,
+      "val_accuracy": 0.9963503479957581,
+      "loss": 0.07136745005846024,
+      "val_loss": 0.02024695836007595,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 4,
+      "stage": "training",
+      "accuracy": 0.9898675084114075,
+      "val_accuracy": 0.9927007555961609,
+      "loss": 0.026540320366621017,
+      "val_loss": 0.017145570367574692,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 5,
+      "stage": "training",
+      "accuracy": 0.9890880584716797,
+      "val_accuracy": 0.985401451587677,
+      "loss": 0.03139829635620117,
+      "val_loss": 0.02140141651034355,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 6,
+      "stage": "training",
+      "accuracy": 0.9851909875869751,
+      "val_accuracy": 1.0,
+      "loss": 0.0299222394824028,
+      "val_loss": 0.004657458513975143,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 7,
+      "stage": "training",
+      "accuracy": 0.9922057390213013,
+      "val_accuracy": 0.9927007555961609,
+      "loss": 0.0254839938133955,
+      "val_loss": 0.015024195425212383,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 8,
+      "stage": "training",
+      "accuracy": 0.9922057390213013,
+      "val_accuracy": 1.0,
+      "loss": 0.018250921741127968,
+      "val_loss": 0.0032207004260271788,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 9,
+      "stage": "training",
+      "accuracy": 0.9890880584716797,
+      "val_accuracy": 0.985401451587677,
+      "loss": 0.03643001243472099,
+      "val_loss": 0.020924517884850502,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 10,
+      "stage": "training",
+      "accuracy": 0.9890880584716797,
+      "val_accuracy": 1.0,
+      "loss": 0.03762843832373619,
+      "val_loss": 0.004385157488286495,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 11,
+      "stage": "training",
+      "accuracy": 0.9906468987464905,
+      "val_accuracy": 1.0,
+      "loss": 0.01564064808189869,
+      "val_loss": 0.0014325558440759778,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 12,
+      "stage": "training",
+      "accuracy": 0.9922057390213013,
+      "val_accuracy": 1.0,
+      "loss": 0.017143774777650833,
+      "val_loss": 0.003611504565924406,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 13,
+      "stage": "training",
+      "accuracy": 0.9859703779220581,
+      "val_accuracy": 1.0,
+      "loss": 0.03617703169584274,
+      "val_loss": 0.0014949280302971601,
+      "learning_rate": 9.999999747378752e-06
+    },
+    {
+      "epoch": 14,
+      "stage": "training",
+      "accuracy": 0.9945440292358398,
+      "val_accuracy": 1.0,
+      "loss": 0.014770826324820518,
+      "val_loss": 0.002901815576478839,
+      "learning_rate": 9.999999747378752e-06
+    },
+    {
+      "epoch": 15,
+      "stage": "training",
+      "accuracy": 0.9968823194503784,
+      "val_accuracy": 1.0,
+      "loss": 0.009898130781948566,
+      "val_loss": 0.0015757520450279117,
+      "learning_rate": 9.999999747378752e-06
+    },
+    {
+      "epoch": 16,
+      "stage": "training",
+      "accuracy": 1.0,
+      "val_accuracy": 1.0,
+      "loss": 0.002075083553791046,
+      "val_loss": 0.0011845766566693783,
+      "learning_rate": 9.999999747378752e-06
+    },
+    {
+      "epoch": 17,
+      "stage": "training",
+      "accuracy": 0.9984411597251892,
+      "val_accuracy": 1.0,
+      "loss": 0.0033804376143962145,
+      "val_loss": 0.0005707403179258108,
+      "learning_rate": 9.999999747378752e-06
+    },
+    {
+      "epoch": 18,
+      "stage": "training",
+      "accuracy": 0.9968823194503784,
+      "val_accuracy": 1.0,
+      "loss": 0.012201003730297089,
+      "val_loss": 0.0005358163616620004,
+      "learning_rate": 9.999999747378752e-06
+    },
+    {
+      "epoch": 19,
+      "stage": "training",
+      "accuracy": 0.9984411597251892,
+      "val_accuracy": 1.0,
+      "loss": 0.00466942647472024,
+      "val_loss": 0.0005110670463182032,
+      "learning_rate": 9.999999747378752e-06
+    }
+  ],
+  "evaluation": {
+    "split": "test",
+    "samples": 277,
+    "accuracy": 0.9891696750902527,
+    "macro_f1": 0.9885026710357836,
+    "loss": null,
+    "confusion_matrix": [
+      [
+        51,
+        0,
+        1,
+        0
+      ],
+      [
+        1,
+        73,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        75,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        75
+      ]
+    ],
+    "per_class": [
+      {
+        "name": "algal leaf spot",
+        "precision": 0.9807692307692307,
+        "recall": 0.9807692307692307,
+        "f1": 0.9807692307692307,
+        "support": 52
+      },
+      {
+        "name": "anthracnose",
+        "precision": 1.0,
+        "recall": 0.9733333333333334,
+        "f1": 0.9864864864864865,
+        "support": 75
+      },
+      {
+        "name": "healthy",
+        "precision": 0.9868421052631579,
+        "recall": 1.0,
+        "f1": 0.9933774834437086,
+        "support": 75
+      },
+      {
+        "name": "sooty mold",
+        "precision": 0.9868421052631579,
+        "recall": 1.0,
+        "f1": 0.9933774834437086,
+        "support": 75
+      }
+    ]
+  }
+}

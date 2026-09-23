@@ -1,0 +1,182 @@
+{
+  "task": "rambutan",
+  "status": "complete",
+  "started_at": "2026-09-15T22:05:52+08:00",
+  "updated_at": "2026-09-15T22:05:53+08:00",
+  "class_names": [
+    "mature",
+    "immature"
+  ],
+  "dataset_root": "C:\\wamp64\\www\\Smart Farming System (1)\\datasets\\rambutan_clean_split",
+  "model_path": "C:\\wamp64\\www\\Smart Farming System (1)\\backend\\modelkeras_rambutan\\trained_rambutan_maturity_model.keras",
+  "epochs": [
+    {
+      "epoch": 1,
+      "stage": "training",
+      "accuracy": 0.8472222089767456,
+      "val_accuracy": 0.9836065769195557,
+      "loss": 0.3401331901550293,
+      "val_loss": 0.055143482983112335,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 2,
+      "stage": "training",
+      "accuracy": 0.9375,
+      "val_accuracy": 1.0,
+      "loss": 0.15579159557819366,
+      "val_loss": 0.011958577670156956,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 3,
+      "stage": "training",
+      "accuracy": 0.9618055820465088,
+      "val_accuracy": 1.0,
+      "loss": 0.10094039887189865,
+      "val_loss": 0.011528681963682175,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 4,
+      "stage": "training",
+      "accuracy": 0.96875,
+      "val_accuracy": 1.0,
+      "loss": 0.07917597889900208,
+      "val_loss": 0.012024515308439732,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 5,
+      "stage": "training",
+      "accuracy": 0.9375,
+      "val_accuracy": 1.0,
+      "loss": 0.14275549352169037,
+      "val_loss": 0.025735758244991302,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 6,
+      "stage": "training",
+      "accuracy": 0.9583333134651184,
+      "val_accuracy": 0.9508196711540222,
+      "loss": 0.110660620033741,
+      "val_loss": 0.06521357595920563,
+      "learning_rate": 0.0010000000474974513
+    },
+    {
+      "epoch": 7,
+      "stage": "training",
+      "accuracy": 0.9791666865348816,
+      "val_accuracy": 1.0,
+      "loss": 0.053159311413764954,
+      "val_loss": 0.03287830203771591,
+      "learning_rate": 0.0005000000237487257
+    },
+    {
+      "epoch": 8,
+      "stage": "training",
+      "accuracy": 0.9861111044883728,
+      "val_accuracy": 1.0,
+      "loss": 0.032021623104810715,
+      "val_loss": 0.02900955080986023,
+      "learning_rate": 0.0005000000237487257
+    },
+    {
+      "epoch": 9,
+      "stage": "training",
+      "accuracy": 0.9479166865348816,
+      "val_accuracy": 1.0,
+      "loss": 0.11238466203212738,
+      "val_loss": 0.011281032115221024,
+      "learning_rate": 9.999999747378752e-06
+    },
+    {
+      "epoch": 10,
+      "stage": "training",
+      "accuracy": 0.9618055820465088,
+      "val_accuracy": 1.0,
+      "loss": 0.1004548892378807,
+      "val_loss": 0.019330376759171486,
+      "learning_rate": 9.999999747378752e-06
+    },
+    {
+      "epoch": 11,
+      "stage": "training",
+      "accuracy": 0.9722222089767456,
+      "val_accuracy": 1.0,
+      "loss": 0.060882970690727234,
+      "val_loss": 0.02554360404610634,
+      "learning_rate": 9.999999747378752e-06
+    },
+    {
+      "epoch": 12,
+      "stage": "training",
+      "accuracy": 0.9826388955116272,
+      "val_accuracy": 1.0,
+      "loss": 0.05441770702600479,
+      "val_loss": 0.0170492772012949,
+      "learning_rate": 9.999999747378752e-06
+    },
+    {
+      "epoch": 13,
+      "stage": "training",
+      "accuracy": 0.9722222089767456,
+      "val_accuracy": 1.0,
+      "loss": 0.0781249850988388,
+      "val_loss": 0.023534489795565605,
+      "learning_rate": 4.999999873689376e-06
+    },
+    {
+      "epoch": 14,
+      "stage": "training",
+      "accuracy": 0.9791666865348816,
+      "val_accuracy": 1.0,
+      "loss": 0.041725482791662216,
+      "val_loss": 0.01397373154759407,
+      "learning_rate": 4.999999873689376e-06
+    },
+    {
+      "epoch": 15,
+      "stage": "training",
+      "accuracy": 0.9791666865348816,
+      "val_accuracy": 1.0,
+      "loss": 0.05735383927822113,
+      "val_loss": 0.011923806741833687,
+      "learning_rate": 4.999999873689376e-06
+    }
+  ],
+  "evaluation": {
+    "split": "test",
+    "samples": 63,
+    "accuracy": 0.9047619047619048,
+    "macro_f1": 0.904158215010142,
+    "loss": null,
+    "confusion_matrix": [
+      [
+        31,
+        1
+      ],
+      [
+        5,
+        26
+      ]
+    ],
+    "per_class": [
+      {
+        "name": "mature",
+        "precision": 0.8611111111111112,
+        "recall": 0.96875,
+        "f1": 0.911764705882353,
+        "support": 32
+      },
+      {
+        "name": "immature",
+        "precision": 0.9629629629629629,
+        "recall": 0.8387096774193549,
+        "f1": 0.896551724137931,
+        "support": 31
+      }
+    ]
+  }
+}

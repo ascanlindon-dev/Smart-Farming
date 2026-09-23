@@ -1,0 +1,2422 @@
+{
+  "model": "ViT-B-32",
+  "min_similarity": 0.25,
+  "min_margin": 0.02,
+  "counts": {
+    "rambutan_accepted": 51,
+    "rambutan_rejected": 12,
+    "other_accepted": 0,
+    "other_rejected": 281
+  },
+  "results": [
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\1 (104) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3182232975959778,
+      "margin": 0.06316760182380676
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\1 (106) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.2815883457660675,
+      "margin": 0.05251966416835785
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\1 (50) - Copy - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3677406907081604,
+      "margin": 0.08162963390350342
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\1 (65) - Copy - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3561593294143677,
+      "margin": 0.06622004508972168
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\1 (70) - Copy - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.33659231662750244,
+      "margin": 0.05695459246635437
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\360_F_2162195206_vemsD1JBDjQiBdsROP96iBo4UPKk6MSk.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3698236644268036,
+      "margin": 0.07536530494689941
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\44 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.2932860851287842,
+      "margin": 0.00912010669708252
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\6 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.33400171995162964,
+      "margin": 0.00988084077835083
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\83 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3213965594768524,
+      "margin": 0.021051079034805298
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\close-up-of-close-up-of-unripe-rambutan-on-tree-branch-on-tree-branch (1).png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3037126660346985,
+      "margin": 0.039470165967941284
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green-rambutan-fruits-on-tree.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3171499967575073,
+      "margin": 0.04881599545478821
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green-rambutan-not-ripe-tree-154000769.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3317083716392517,
+      "margin": 0.028607666492462158
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green-rambutan-on-the-tree-in-the-garden-on-green-background-photo.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.32070210576057434,
+      "margin": 0.03507581353187561
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green-rambutan-on-tree (1).png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3358997702598572,
+      "margin": 0.040992408990859985
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_007.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3333432674407959,
+      "margin": 0.04623571038246155
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_010.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3671613931655884,
+      "margin": 0.05539712309837341
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_031.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.335534930229187,
+      "margin": 0.047240108251571655
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_033.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.32853832840919495,
+      "margin": 0.051428765058517456
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_034.jpg",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.3221748471260071,
+      "margin": 0.013607770204544067
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_035.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.36195945739746094,
+      "margin": 0.05697968602180481
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_037.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.34723302721977234,
+      "margin": 0.0545269250869751
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_040.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.347554475069046,
+      "margin": 0.027555018663406372
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_048.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3542092442512512,
+      "margin": 0.0663040280342102
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_061.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.34869253635406494,
+      "margin": 0.05121731758117676
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\green_rambutan_063.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3607102632522583,
+      "margin": 0.05905282497406006
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\images (3) - Copy - Copy.jpg",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.30522745847702026,
+      "margin": -0.02764296531677246
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\rambutan-8818154_640.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.27992886304855347,
+      "margin": 0.037321656942367554
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\ripe-rambutan-or-hairy-fruit-fruit-that-is-still-on-the-tree-isolated-on-blue-clear-sky-background-free-photo.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3028445243835449,
+      "margin": 0.03180268406867981
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\unripe-green-rambutan-fruits-hanging-on-a-branch.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3291497826576233,
+      "margin": 0.06049427390098572
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\unripe-rambutan-on-tree-260nw-2242264233.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.349609911441803,
+      "margin": 0.04848510026931763
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\immature\\unripe-rambutan-on-tree-green-260nw-2240910725 (1).png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3147483468055725,
+      "margin": 0.027062058448791504
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\1 (102) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3689712882041931,
+      "margin": 0.03729620575904846
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\1 (111) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.3248019218444824,
+      "margin": 0.014325469732284546
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\1 (115) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.4012676477432251,
+      "margin": 0.05168265104293823
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\1 (19) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3220613896846771,
+      "margin": 0.03686949610710144
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\1 (32) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3733895421028137,
+      "margin": 0.031108319759368896
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\1 (33) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.36140507459640503,
+      "margin": 0.013511836528778076
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\1 (58) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.3301469087600708,
+      "margin": 0.012145817279815674
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\1 (75) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3256983757019043,
+      "margin": 0.027308166027069092
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\1 (8) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.29772818088531494,
+      "margin": 0.05107410252094269
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\1 (85) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.377790629863739,
+      "margin": 0.01246991753578186
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\10 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.37132173776626587,
+      "margin": 0.05906534194946289
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\20 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.32481813430786133,
+      "margin": 0.07269489765167236
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\21 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3269573450088501,
+      "margin": 0.07090151309967041
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\22 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3249877691268921,
+      "margin": 0.042817503213882446
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\360_F_1900265047_gqueVb7wPyZPrWnjs3sqmE72XoKm7EzZ.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3467981517314911,
+      "margin": 0.02941906452178955
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\360_F_2071405839_MwPkU2Ge90wnU82afW7U3Mbrvfu3mD5Q.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3550739884376526,
+      "margin": 0.03778854012489319
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\40 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.35826414823532104,
+      "margin": 0.03190195560455322
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\41 - Copy (2).png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.327387273311615,
+      "margin": 0.06655877828598022
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\61 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.35606086254119873,
+      "margin": 0.0536540150642395
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\8 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3025722801685333,
+      "margin": 0.0412726104259491
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\92 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.23691724240779877,
+      "margin": -0.053229913115501404
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\97 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3496919870376587,
+      "margin": 0.0384640097618103
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\98 - Copy (2).jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3479079008102417,
+      "margin": 0.049184828996658325
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\close-up-cluster-of-rambutan-fruits-growing-on-a-tree-vietnam.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.35518908500671387,
+      "margin": 0.04613775014877319
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\download (10) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3405608534812927,
+      "margin": 0.025337308645248413
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\download (16) - Copy.jpg",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3551985025405884,
+      "margin": 0.02928692102432251
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\groups-of-rambutan-ready-for-harvest (1).png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3448062837123871,
+      "margin": 0.061855167150497437
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\rambutan-fruits-on-tree-free-photo.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3615858852863312,
+      "margin": 0.021825700998306274
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\rambutan-in-summer-photo.png",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.34848618507385254,
+      "margin": 0.007030069828033447
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\rambutan_fruits (11).png",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.3591077923774719,
+      "margin": 0.01939365267753601
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\ripe-red-rambutan-fruits-grow-on-a-tree-branch-free-photo.png",
+      "is_rambutan": true,
+      "verified": false,
+      "similarity": 0.31314992904663086,
+      "margin": -0.010522514581680298
+    },
+    {
+      "path": "datasets\\rambutan_clean_split\\test\\mature\\tropical-fruit-rambutan-on-tree-free-photo.png",
+      "is_rambutan": true,
+      "verified": true,
+      "similarity": 0.3608115315437317,
+      "margin": 0.04983219504356384
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\Anthracnose  (519).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1919659972190857,
+      "margin": -0.15461942553520203
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\img (10).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18790654838085175,
+      "margin": -0.13936622440814972
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\img (18).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1592060625553131,
+      "margin": -0.14512759447097778
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\img (6).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12535184621810913,
+      "margin": -0.18552958965301514
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251217_135333_306.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1566074788570404,
+      "margin": -0.13727721571922302
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251217_135720_443.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.11714629828929901,
+      "margin": -0.19079048931598663
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251217_135735_967.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17274972796440125,
+      "margin": -0.1430862545967102
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251217_135743_077.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14826136827468872,
+      "margin": -0.1753368079662323
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251217_135833_082.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.20410886406898499,
+      "margin": -0.12297138571739197
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251217_135859_490.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.142096146941185,
+      "margin": -0.20001621544361115
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251217_140057_841.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1563360095024109,
+      "margin": -0.17221951484680176
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_132231_971.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13251757621765137,
+      "margin": -0.19423776865005493
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_132921_474.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16208431124687195,
+      "margin": -0.17708337306976318
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_133344_985.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16585075855255127,
+      "margin": -0.17795199155807495
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_133421_655.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15702104568481445,
+      "margin": -0.15803802013397217
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_133914_251.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17017535865306854,
+      "margin": -0.16320009529590607
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_140706_361.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18604788184165955,
+      "margin": -0.12706586718559265
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_141037_417.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16352182626724243,
+      "margin": -0.16861504316329956
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_141146_573.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21011249721050262,
+      "margin": -0.1360747367143631
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_141405_449.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16140873730182648,
+      "margin": -0.16109059751033783
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_142633_222 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13779497146606445,
+      "margin": -0.21101462841033936
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_142907_591 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16953393816947937,
+      "margin": -0.16196855902671814
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_142930_049 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15163956582546234,
+      "margin": -0.18108592927455902
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20251230_142950_433 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1363387405872345,
+      "margin": -0.20383551716804504
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_163024_713 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1313122808933258,
+      "margin": -0.2013590931892395
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_163129_715 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12252815812826157,
+      "margin": -0.18475375324487686
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_163219_390 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1525038480758667,
+      "margin": -0.16136205196380615
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_163511_082 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12618689239025116,
+      "margin": -0.2022748440504074
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_163639_853 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1503673493862152,
+      "margin": -0.20220068097114563
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_163705_930 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13647930324077606,
+      "margin": -0.21499915421009064
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_164222_050 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14642676711082458,
+      "margin": -0.1707756221294403
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_164335_512 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14331407845020294,
+      "margin": -0.15960542857646942
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_164338_446 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14777502417564392,
+      "margin": -0.16528615355491638
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_164342_578 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15724952518939972,
+      "margin": -0.18111656606197357
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_164354_431 - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12391891330480576,
+      "margin": -0.20971763879060745
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_164417_327.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13995613157749176,
+      "margin": -0.17475490272045135
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_164640_116.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.10441678762435913,
+      "margin": -0.17080038785934448
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260607_164729_824.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1024375706911087,
+      "margin": -0.21102853119373322
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260611_100748_249.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18199431896209717,
+      "margin": -0.1515209674835205
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260611_100755_849.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13298848271369934,
+      "margin": -0.19919288158416748
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260611_101242_117.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13412988185882568,
+      "margin": -0.18853634595870972
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260611_104904_072.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16914859414100647,
+      "margin": -0.1652742326259613
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260611_104942_689.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1378481686115265,
+      "margin": -0.16081741452217102
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260611_105202_196.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18828584253787994,
+      "margin": -0.11089043319225311
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260611_105400_519.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13050860166549683,
+      "margin": -0.20363318920135498
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260611_105429_106.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1306494176387787,
+      "margin": -0.21064773201942444
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260611_105806_931.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13236436247825623,
+      "margin": -0.1925618052482605
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\IMG_20260611_105815_165.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14515450596809387,
+      "margin": -0.17149686813354492
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\Powdery Mildew (38).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17141766846179962,
+      "margin": -0.1591961532831192
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\Powdery Mildew (40).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18436720967292786,
+      "margin": -0.14550650119781494
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\Powdery Mildew (53) - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18100036680698395,
+      "margin": -0.1599101573228836
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\algal leaf spot\\Powdery Mildew (59) - Copy.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16855496168136597,
+      "margin": -0.15546897053718567
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (10).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14351347088813782,
+      "margin": -0.1887156367301941
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (101).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.22158586978912354,
+      "margin": -0.10759955644607544
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (110).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16342493891716003,
+      "margin": -0.18131589889526367
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (117).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1459559202194214,
+      "margin": -0.20384249091148376
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (130).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19972556829452515,
+      "margin": -0.143871009349823
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (134).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17325067520141602,
+      "margin": -0.16818153858184814
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (161).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14329376816749573,
+      "margin": -0.1858864426612854
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (179).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15995202958583832,
+      "margin": -0.1825479120016098
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (183).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.197379931807518,
+      "margin": -0.12046225368976593
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (192).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19899091124534607,
+      "margin": -0.12370696663856506
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (194).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15799275040626526,
+      "margin": -0.15364399552345276
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (2).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1560080349445343,
+      "margin": -0.19452860951423645
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (20).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14300021529197693,
+      "margin": -0.19977617263793945
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (204).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15316250920295715,
+      "margin": -0.19225060939788818
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (208).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17345017194747925,
+      "margin": -0.162651926279068
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (210).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.20579661428928375,
+      "margin": -0.13559477031230927
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (211).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12884549796581268,
+      "margin": -0.19748838245868683
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (216).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17671097815036774,
+      "margin": -0.1467326134443283
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (224).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1889498233795166,
+      "margin": -0.12472081184387207
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (225).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1757792830467224,
+      "margin": -0.14388948678970337
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (236).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1899518370628357,
+      "margin": -0.12588822841644287
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (237).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.07892961800098419,
+      "margin": -0.2509256452322006
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (261).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15977683663368225,
+      "margin": -0.17129242420196533
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (264).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21541544795036316,
+      "margin": -0.11911919713020325
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (266).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.20896103978157043,
+      "margin": -0.1256413757801056
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (282).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.20136696100234985,
+      "margin": -0.09252548217773438
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (285).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16932198405265808,
+      "margin": -0.15950646996498108
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (292).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18258285522460938,
+      "margin": -0.15540838241577148
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (296).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.22136636078357697,
+      "margin": -0.10557471215724945
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (298).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19423717260360718,
+      "margin": -0.13953596353530884
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (301).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18875236809253693,
+      "margin": -0.15485478937625885
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (302).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19720079004764557,
+      "margin": -0.13479427993297577
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (310).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1791519820690155,
+      "margin": -0.16103491187095642
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (311).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14010845124721527,
+      "margin": -0.2071308046579361
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (318).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12031993269920349,
+      "margin": -0.2244565188884735
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (32).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1919746696949005,
+      "margin": -0.13034406304359436
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (33).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1834384799003601,
+      "margin": -0.14466768503189087
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (332).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.22126200795173645,
+      "margin": -0.093960702419281
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (335).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1817988157272339,
+      "margin": -0.13334870338439941
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (34).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19143636524677277,
+      "margin": -0.1301387995481491
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (346).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1527618169784546,
+      "margin": -0.17302584648132324
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (373).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16850684583187103,
+      "margin": -0.18194200098514557
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (381).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1566927433013916,
+      "margin": -0.16994482278823853
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (391).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1673768311738968,
+      "margin": -0.1558549553155899
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (40).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.23370568454265594,
+      "margin": -0.06696178019046783
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (407).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15788647532463074,
+      "margin": -0.17154979705810547
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (415).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.23430141806602478,
+      "margin": -0.08647865056991577
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (416).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.23411355912685394,
+      "margin": -0.07524491846561432
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (427).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17985156178474426,
+      "margin": -0.14404192566871643
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (432).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14935025572776794,
+      "margin": -0.18579283356666565
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (435).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.22021369636058807,
+      "margin": -0.11266191303730011
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (440).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19815252721309662,
+      "margin": -0.12936438620090485
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (445).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.26362571120262146,
+      "margin": -0.04083123803138733
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (466).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.10926487296819687,
+      "margin": -0.2303391769528389
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (470).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13211405277252197,
+      "margin": -0.20531588792800903
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (475).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.10719646513462067,
+      "margin": -0.21403081715106964
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (481).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17674466967582703,
+      "margin": -0.15126118063926697
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (487).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2479693591594696,
+      "margin": -0.07470366358757019
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (491).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14573922753334045,
+      "margin": -0.20638740062713623
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (496).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1897485852241516,
+      "margin": -0.1454584002494812
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (498).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16625580191612244,
+      "margin": -0.11537730693817139
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (500).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15759000182151794,
+      "margin": -0.1733437478542328
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (58).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13254119455814362,
+      "margin": -0.1943512111902237
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (59).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1685667335987091,
+      "margin": -0.181144118309021
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (60).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18929192423820496,
+      "margin": -0.14106547832489014
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (62).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2019016146659851,
+      "margin": -0.11133795976638794
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (63).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19402319192886353,
+      "margin": -0.1238020658493042
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (72).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21369126439094543,
+      "margin": -0.10739922523498535
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (73).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17846250534057617,
+      "margin": -0.12848034501075745
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (78).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12367468327283859,
+      "margin": -0.19649607688188553
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (79).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1834748387336731,
+      "margin": -0.1544615626335144
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (88).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18569061160087585,
+      "margin": -0.12920665740966797
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (9).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13046610355377197,
+      "margin": -0.18383216857910156
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (93).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15905332565307617,
+      "margin": -0.16936439275741577
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\anthracnose\\image (99).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1914634257555008,
+      "margin": -0.15133826434612274
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (10).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17853039503097534,
+      "margin": -0.14253929257392883
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (103).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18286475539207458,
+      "margin": -0.12796929478645325
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (104).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18240433931350708,
+      "margin": -0.13837885856628418
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (107).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.20458722114562988,
+      "margin": -0.10047352313995361
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (109).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1725742369890213,
+      "margin": -0.15940551459789276
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (112).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17602187395095825,
+      "margin": -0.140816330909729
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (119).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1568794697523117,
+      "margin": -0.1579144448041916
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (120).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15042851865291595,
+      "margin": -0.16007323563098907
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (128).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.20301222801208496,
+      "margin": -0.11199760437011719
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (130).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2002238929271698,
+      "margin": -0.11585155129432678
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (131).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17955346405506134,
+      "margin": -0.13611124455928802
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (135).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1857079267501831,
+      "margin": -0.12615802884101868
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (139).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17267706990242004,
+      "margin": -0.14374896883964539
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (140).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16096892952919006,
+      "margin": -0.15505573153495789
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (162).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17647483944892883,
+      "margin": -0.13973739743232727
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (163).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16246357560157776,
+      "margin": -0.1536301076412201
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (179).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19566687941551208,
+      "margin": -0.1215573251247406
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (183).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19421762228012085,
+      "margin": -0.12252914905548096
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (207).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21100065112113953,
+      "margin": -0.0895494818687439
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (208).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18423862755298615,
+      "margin": -0.12960000336170197
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (217).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21074485778808594,
+      "margin": -0.08879682421684265
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (220).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17797423899173737,
+      "margin": -0.13748110830783844
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (247).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.217315211892128,
+      "margin": -0.08931626379489899
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (250).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1766354739665985,
+      "margin": -0.12675175070762634
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (254).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2133575975894928,
+      "margin": -0.09153714776039124
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (255).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19359686970710754,
+      "margin": -0.1267666518688202
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (266).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2222389280796051,
+      "margin": -0.06718844175338745
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (269).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.22473332285881042,
+      "margin": -0.07750919461250305
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (27).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2128838449716568,
+      "margin": -0.10834036767482758
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (272).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21888785064220428,
+      "margin": -0.10169292986392975
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (274).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2165813446044922,
+      "margin": -0.08003172278404236
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (280).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21137237548828125,
+      "margin": -0.07193732261657715
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (284).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.22002016007900238,
+      "margin": -0.0854199081659317
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (294).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.20501317083835602,
+      "margin": -0.10425953567028046
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (296).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17682529985904694,
+      "margin": -0.1381608098745346
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (297).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.23119279742240906,
+      "margin": -0.07060810923576355
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (300).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17571377754211426,
+      "margin": -0.14383265376091003
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (301).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1975017786026001,
+      "margin": -0.11308532953262329
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (305).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18766924738883972,
+      "margin": -0.12499573826789856
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (306).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2030763030052185,
+      "margin": -0.11880820989608765
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (307).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19899961352348328,
+      "margin": -0.11586800217628479
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (310).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.24783825874328613,
+      "margin": -0.04907378554344177
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (312).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1646440476179123,
+      "margin": -0.16272272169589996
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (317).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21642287075519562,
+      "margin": -0.0778159350156784
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (325).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.202661395072937,
+      "margin": -0.09375745058059692
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (330).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2009664922952652,
+      "margin": -0.10922841727733612
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (332).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21317771077156067,
+      "margin": -0.10185053944587708
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (336).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17625680565834045,
+      "margin": -0.1369766891002655
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (340).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18165457248687744,
+      "margin": -0.12211766839027405
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (344).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1788114309310913,
+      "margin": -0.13068938255310059
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (363).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19123610854148865,
+      "margin": -0.11475995182991028
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (373).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19955864548683167,
+      "margin": -0.11789152026176453
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (381).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.22088328003883362,
+      "margin": -0.09605589509010315
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (388).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1881846785545349,
+      "margin": -0.1271609663963318
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (396).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19478419423103333,
+      "margin": -0.10419175028800964
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (398).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.23337796330451965,
+      "margin": -0.06946620345115662
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (401).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21574810147285461,
+      "margin": -0.09017956256866455
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (403).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15244582295417786,
+      "margin": -0.14346984028816223
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (407).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17798447608947754,
+      "margin": -0.12892261147499084
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (424).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1668747365474701,
+      "margin": -0.1260579526424408
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (427).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16024363040924072,
+      "margin": -0.1289917528629303
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (429).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15305230021476746,
+      "margin": -0.133769690990448
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (430).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17413920164108276,
+      "margin": -0.11945074796676636
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (437).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17236196994781494,
+      "margin": -0.12528157234191895
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (439).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.20971228182315826,
+      "margin": -0.09148575365543365
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (449).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18511998653411865,
+      "margin": -0.10984170436859131
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (453).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19162803888320923,
+      "margin": -0.10487163066864014
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (457).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.23062069714069366,
+      "margin": -0.08777810633182526
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (461).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1697145700454712,
+      "margin": -0.1359708309173584
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (482).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18231099843978882,
+      "margin": -0.12620046734809875
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (495).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18751686811447144,
+      "margin": -0.12563759088516235
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (57).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17588382959365845,
+      "margin": -0.14395654201507568
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (59).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17221015691757202,
+      "margin": -0.1505984663963318
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (72).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2303221970796585,
+      "margin": -0.06289957463741302
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\healthy\\images (77).jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1689988374710083,
+      "margin": -0.14654991030693054
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\791333523_1086396160664554_4377888843439532479_n.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.11966191977262497,
+      "margin": -0.19662607461214066
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\793380294_2531641487309735_7224159930758784202_n.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.11403951048851013,
+      "margin": -0.21935150027275085
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_002.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17271292209625244,
+      "margin": -0.15955662727355957
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_012.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.10604050755500793,
+      "margin": -0.23597124218940735
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_014 - Copy.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12075168639421463,
+      "margin": -0.18507453054189682
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_016 - Copy.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19124481081962585,
+      "margin": -0.13685086369514465
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_021.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12235775589942932,
+      "margin": -0.23672762513160706
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_022.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.22785454988479614,
+      "margin": -0.08266457915306091
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_028.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12670542299747467,
+      "margin": -0.20743326842784882
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_031.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1464335024356842,
+      "margin": -0.19981113076210022
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_044.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19029496610164642,
+      "margin": -0.15213195979595184
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_045.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1655515730381012,
+      "margin": -0.15119004249572754
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_048.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1714848130941391,
+      "margin": -0.17466561496257782
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_056.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1497698575258255,
+      "margin": -0.1882348209619522
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_058.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19318994879722595,
+      "margin": -0.1639123260974884
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_061.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.11017467826604843,
+      "margin": -0.24385301023721695
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_063.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.11751855164766312,
+      "margin": -0.1993597373366356
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_077.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1259954273700714,
+      "margin": -0.20325446128845215
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_085.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.22315946221351624,
+      "margin": -0.09988227486610413
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_130.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17840036749839783,
+      "margin": -0.1344500482082367
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_146.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18179267644882202,
+      "margin": -0.16561239957809448
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_150.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21749067306518555,
+      "margin": -0.12015318870544434
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_153.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16493859887123108,
+      "margin": -0.17497655749320984
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_157.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19878438115119934,
+      "margin": -0.13333186507225037
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_165.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16605544090270996,
+      "margin": -0.1416652798652649
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_166.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1717037856578827,
+      "margin": -0.15613994002342224
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_183.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2123381495475769,
+      "margin": -0.10492193698883057
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_184.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19637882709503174,
+      "margin": -0.14350125193595886
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_190.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17514675855636597,
+      "margin": -0.17236405611038208
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_194.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1369672417640686,
+      "margin": -0.1553458571434021
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_197.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.10500381141901016,
+      "margin": -0.25404464453458786
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_204.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13461202383041382,
+      "margin": -0.20347723364830017
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_206.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2002788931131363,
+      "margin": -0.12786974012851715
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_214.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17735998332500458,
+      "margin": -0.1574912816286087
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_232.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2260497808456421,
+      "margin": -0.08912301063537598
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_246.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.12989431619644165,
+      "margin": -0.2074190378189087
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_248.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2263551652431488,
+      "margin": -0.10104188323020935
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_254.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18142257630825043,
+      "margin": -0.17879290878772736
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_255.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19645550847053528,
+      "margin": -0.1215568482875824
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_279.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.10165241360664368,
+      "margin": -0.22591790556907654
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_281.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2162705510854721,
+      "margin": -0.10847191512584686
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_292.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18251509964466095,
+      "margin": -0.12373371422290802
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_293.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16463875770568848,
+      "margin": -0.18125343322753906
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_305.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1275658905506134,
+      "margin": -0.21390894055366516
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_321.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15554097294807434,
+      "margin": -0.15696117281913757
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_323.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1351618766784668,
+      "margin": -0.20532077550888062
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_326.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19585654139518738,
+      "margin": -0.12989166378974915
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_327.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1484762728214264,
+      "margin": -0.17955487966537476
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_337.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.17227865755558014,
+      "margin": -0.1679397076368332
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_342.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1653892993927002,
+      "margin": -0.1875796914100647
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_347.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19698691368103027,
+      "margin": -0.14190363883972168
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_348.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13284289836883545,
+      "margin": -0.2252236008644104
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_351.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1450652778148651,
+      "margin": -0.18580985069274902
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_353.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19341614842414856,
+      "margin": -0.14009839296340942
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_370.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1526964008808136,
+      "margin": -0.1287674903869629
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_377.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1246844083070755,
+      "margin": -0.20919685065746307
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_382.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15015718340873718,
+      "margin": -0.12617668509483337
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_386.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1490047723054886,
+      "margin": -0.1885674148797989
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_395.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.23146356642246246,
+      "margin": -0.10037212073802948
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_397.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.11180151998996735,
+      "margin": -0.24682734906673431
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_421.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13387751579284668,
+      "margin": -0.20440292358398438
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_422.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.18004842102527618,
+      "margin": -0.15776102244853973
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_424.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.19736860692501068,
+      "margin": -0.12810714542865753
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_435.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16799446940422058,
+      "margin": -0.17854535579681396
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_448.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16341465711593628,
+      "margin": -0.1760956048965454
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_460.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15920883417129517,
+      "margin": -0.1752886176109314
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_464.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16806912422180176,
+      "margin": -0.13562113046646118
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_467.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15343689918518066,
+      "margin": -0.15697306394577026
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_476.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13264815509319305,
+      "margin": -0.21357260644435883
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_481.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.14992013573646545,
+      "margin": -0.18454229831695557
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_482.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.15925338864326477,
+      "margin": -0.16119155287742615
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_483.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.1527937799692154,
+      "margin": -0.16219602525234222
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_486.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.13879698514938354,
+      "margin": -0.17032986879348755
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_494.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.21374841034412384,
+      "margin": -0.13250406086444855
+    },
+    {
+      "path": "datasets\\leaf_split\\test\\sooty mold\\rambutan_sooty_mold_496.jpeg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16200411319732666,
+      "margin": -0.17267480492591858
+    },
+    {
+      "path": ".cache\\rambutan_guard_checks\\apple.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.16742804646492004,
+      "margin": -0.1460520327091217
+    },
+    {
+      "path": ".cache\\rambutan_guard_checks\\banana.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.07803907245397568,
+      "margin": -0.23867804557085037
+    },
+    {
+      "path": ".cache\\rambutan_guard_checks\\people_bus.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.058481648564338684,
+      "margin": -0.12530125677585602
+    },
+    {
+      "path": ".cache\\rambutan_guard_checks\\lychee.jpg",
+      "is_rambutan": false,
+      "verified": false,
+      "similarity": 0.2719276547431946,
+      "margin": -0.06655821204185486
+    }
+  ],
+  "scope": "This measures only the supplied photos. It is not a guarantee for unseen objects."
+}

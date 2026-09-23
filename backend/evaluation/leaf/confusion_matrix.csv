@@ -1,0 +1,5 @@
+Actual \ Predicted,algal leaf spot,anthracnose,healthy,sooty mold
+algal leaf spot,51,0,1,0
+anthracnose,1,73,0,1
+healthy,0,0,75,0
+sooty mold,0,0,0,75

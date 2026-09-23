@@ -1,0 +1,48 @@
+# Gmail OAuth secrets (see backend/setup_gmail_oauth.py) — never commit these
+backend/client_secret.json
+backend/client_secret*.json
+backend/gmail_credentials.json
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Generated application files and local caches
+build/
+.cache/
+.tmp-push-repair-build/
+backend/db.sqlite3
+backend/**/__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Local environments, datasets, downloads, and training runs
+.venv/
+venv/
+.env.*
+!.env.example
+datasets/
+backend/models/rambutan_guard/
+backend/runs/
+runs/
+Ultralytics/
+backend/Ultralytics/
+collected/
+train/
+sensor_readings.json
+*.sqlite3
+*.sqlite3-journal
+
+# Local SQLite tools and temporary image experiments
+/sqldiff
+/sqlite3
+/sqlite3_analyzer
+/sqlite3_rsync
+/output.png
+/2output.png
+/temp_crop.png

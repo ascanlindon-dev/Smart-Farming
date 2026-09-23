@@ -1,0 +1,2 @@
+# Install in the same environment as Django. Uses the existing torch/torchvision.
+open_clip_torch==3.3.0

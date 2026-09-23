@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "sonner@2.0.3": ["node_modules/sonner"],
+      "lucide-react@0.487.0": ["node_modules/lucide-react"],
+      "cmdk@1.1.1": ["node_modules/cmdk"],
+      "react-day-picker@8.10.1": ["node_modules/react-day-picker"],
+      "@radix-ui/react-slot@1.1.2": ["node_modules/@radix-ui/react-slot"],
+      "@radix-ui/react-dialog@1.1.6": ["node_modules/@radix-ui/react-dialog"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

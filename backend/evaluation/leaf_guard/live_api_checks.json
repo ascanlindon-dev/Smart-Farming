@@ -1,0 +1,47 @@
+[
+  {
+    "path": ".cache\\rambutan_guard_checks\\apple.jpg",
+    "status": 200,
+    "type": "not_leaf",
+    "label": "not_leaf",
+    "confidence": null,
+    "leaf_verified": false,
+    "message": "Leaves only. Take a clear close-up of one leaf with its edges visible."
+  },
+  {
+    "path": ".cache\\rambutan_guard_checks\\banana.jpg",
+    "status": 200,
+    "type": "not_leaf",
+    "label": "not_leaf",
+    "confidence": null,
+    "leaf_verified": false,
+    "message": "Leaves only. Take a clear close-up of one leaf with its edges visible."
+  },
+  {
+    "path": ".cache\\rambutan_guard_checks\\lychee.jpg",
+    "status": 200,
+    "type": "not_leaf",
+    "label": "not_leaf",
+    "confidence": null,
+    "leaf_verified": false,
+    "message": "Leaves only. Take a clear close-up of one leaf with its edges visible."
+  },
+  {
+    "path": ".cache\\rambutan_guard_checks\\people_bus.jpg",
+    "status": 200,
+    "type": "not_leaf",
+    "label": "not_leaf",
+    "confidence": null,
+    "leaf_verified": false,
+    "message": "Leaves only. Take a clear close-up of one leaf with its edges visible."
+  },
+  {
+    "path": "datasets\\rambutan_clean_split\\test\\immature\\1 (104) - Copy.jpg",
+    "status": 200,
+    "type": "not_leaf",
+    "label": "not_leaf",
+    "confidence": null,
+    "leaf_verified": false,
+    "message": "Leaves only. Take a clear close-up of one leaf with its edges visible."
+  }
+]

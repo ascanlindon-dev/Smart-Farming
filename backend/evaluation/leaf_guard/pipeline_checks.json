@@ -1,0 +1,65 @@
+[
+  {
+    "path": "datasets\\leaf_split\\test\\healthy\\images (10).jpg",
+    "status": 200,
+    "history_write_intercepted": true,
+    "type": "leaf",
+    "label": "Healthy Leaf",
+    "leaf_verified": true,
+    "confidence": 0.9999731779098511,
+    "raw_probs": [
+      1.4334626712297904e-06,
+      1.4984419067332055e-05,
+      0.9999731779098511,
+      1.0462866157467943e-05
+    ],
+    "class_names": [
+      "algal leaf spot",
+      "anthracnose",
+      "healthy",
+      "sooty mold"
+    ]
+  },
+  {
+    "path": "datasets\\leaf_split\\test\\anthracnose\\image (237).jpg",
+    "status": 200,
+    "history_write_intercepted": true,
+    "type": "leaf",
+    "label": "Sooty Mold",
+    "leaf_verified": true,
+    "confidence": 0.6839443445205688,
+    "raw_probs": [
+      0.005018845200538635,
+      0.31103515625,
+      1.717958866720437e-06,
+      0.6839443445205688
+    ],
+    "class_names": [
+      "algal leaf spot",
+      "anthracnose",
+      "healthy",
+      "sooty mold"
+    ]
+  },
+  {
+    "path": "datasets\\leaf_split\\test\\algal leaf spot\\Anthracnose  (519).jpg",
+    "status": 200,
+    "history_write_intercepted": true,
+    "type": "leaf",
+    "label": "Algal Leaf Spot (Black Spots)",
+    "leaf_verified": true,
+    "confidence": 0.9999070167541504,
+    "raw_probs": [
+      0.9999070167541504,
+      3.4414683796057943e-06,
+      8.89882940100506e-05,
+      4.501735588746669e-07
+    ],
+    "class_names": [
+      "algal leaf spot",
+      "anthracnose",
+      "healthy",
+      "sooty mold"
+    ]
+  }
+]

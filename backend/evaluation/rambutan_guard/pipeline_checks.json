@@ -1,0 +1,18 @@
+[
+  {
+    "expected": "mature",
+    "http": 200,
+    "label": "mature",
+    "verified": true,
+    "confidence": 0.9999971389770508,
+    "save_attempts_mocked": 1
+  },
+  {
+    "expected": "immature",
+    "http": 200,
+    "label": "immature",
+    "verified": true,
+    "confidence": 0.914035439491272,
+    "save_attempts_mocked": 1
+  }
+]
