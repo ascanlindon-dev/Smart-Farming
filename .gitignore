@@ -46,3 +46,4 @@ sensor_readings.json
 /output.png
 /2output.png
 /temp_crop.png
+backend/staticfiles/

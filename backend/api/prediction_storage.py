@@ -59,6 +59,9 @@ def sync_prediction(prediction):
 
 def prediction_storage_status(prediction):
     result = {'saved': True, 'prediction_id': prediction.pk, 'cloud_saved': None}
+    if not settings.PREDICTION_SYNC_DATABASE and getattr(settings, 'PREDICTIONS_STORED_IN_CLOUD', False):
+        # On Railway the primary database is already Supabase; no second insert.
+        return {**result, 'cloud_saved': True, 'cloud_prediction_id': prediction.pk}
     try:
         cloud_id = sync_prediction(prediction)
         if cloud_id is not None:

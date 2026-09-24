@@ -116,23 +116,23 @@ export default function ForgotPassword({ onSwitchToLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-amber-50 flex items-center justify-center p-4 overflow-hidden relative">
+    <div className="min-h-screen bg-linear-to-br from-emerald-50 via-green-50 to-amber-50 flex items-center justify-center p-4 overflow-hidden relative">
       <div className="absolute top-10 right-1/4 w-80 h-80 bg-emerald-300 rounded-full blur-3xl opacity-20 sm:w-96 sm:h-96"></div>
       <div className="absolute bottom-10 left-1/4 w-64 h-64 bg-amber-300 rounded-full blur-3xl opacity-20 sm:w-80 sm:h-80"></div>
 
       <div className="absolute top-0 right-0 z-0 pointer-events-none overflow-hidden">
-        <div className="transform rotate-[15deg] origin-top-right translate-x-8 -translate-y-4">
+        <div className="transform rotate-15 origin-top-right translate-x-8 -translate-y-4">
           <img
             src={rambutanImage}
             alt="Rambutan fruits"
-            className="w-[200px] sm:w-[280px] md:w-[320px] lg:w-[400px] xl:w-[480px] h-auto object-contain drop-shadow-2xl opacity-90"
+            className="w-50 sm:w-70 md:w-[320px] lg:w-100 xl:w-120 h-auto object-contain drop-shadow-2xl opacity-90"
           />
         </div>
       </div>
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 rounded-2xl mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-r from-emerald-600 via-teal-600 to-green-600 rounded-2xl mb-4 shadow-lg">
             <Leaf className="w-8 h-8 text-white" />
           </div>
           <h1 className="brand-wordmark mb-2 text-emerald-800">RAMBUTECH</h1>
@@ -161,7 +161,7 @@ export default function ForgotPassword({ onSwitchToLogin }) {
                 {error && <p className="text-sm text-red-600">{error}</p>}
                 <Button
                   disabled={submitting}
-                  className="w-full bg-gradient-to-r from-emerald-700 via-teal-600 to-green-600 hover:opacity-90 text-white shadow-md"
+                  className="w-full bg-linear-to-r from-emerald-700 via-teal-600 to-green-600 hover:opacity-90 text-white shadow-md"
                 >
                   {submitting ? "Sending..." : "Send Code"}
                 </Button>
@@ -213,7 +213,7 @@ export default function ForgotPassword({ onSwitchToLogin }) {
                 {error && <p className="text-sm text-red-600">{error}</p>}
                 <Button
                   disabled={submitting}
-                  className="w-full bg-gradient-to-r from-emerald-700 via-teal-600 to-green-600 hover:opacity-90 text-white shadow-md"
+                  className="w-full bg-linear-to-r from-emerald-700 via-teal-600 to-green-600 hover:opacity-90 text-white shadow-md"
                 >
                   {submitting ? "Updating..." : "Update Password"}
                 </Button>
@@ -247,7 +247,7 @@ export default function ForgotPassword({ onSwitchToLogin }) {
               <p className="text-slate-600">You can now log in with your new password.</p>
               <Button
                 onClick={onSwitchToLogin}
-                className="w-full bg-gradient-to-r from-emerald-700 via-teal-600 to-green-600 hover:opacity-90 text-white shadow-md"
+                className="w-full bg-linear-to-r from-emerald-700 via-teal-600 to-green-600 hover:opacity-90 text-white shadow-md"
               >
                 Back to Login
               </Button>

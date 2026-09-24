@@ -9,6 +9,10 @@ are excluded. Keep the original working folder as a backup when migrating.
 
 Original UI design: https://www.figma.com/design/LfK7S9ENumlM8BqkIOOiWV/Smart-Farming-System
 
+For Railway hosting with Supabase, follow [the deployment guide](RAILWAY.md).
+The Dockerfile builds the frontend and serves it with the API on one HTTPS domain.
+Local accounts and historical ownership require a separate migration review.
+
 ## First-time setup (Windows / PowerShell)
 
 Use Python 3.12 and Node.js. From the project root:

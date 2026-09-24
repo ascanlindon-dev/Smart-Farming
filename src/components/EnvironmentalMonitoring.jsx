@@ -122,7 +122,7 @@ export default function EnvironmentalMonitoring() {
     <>
     <div className="mx-auto max-w-4xl px-3 pb-16 pt-3 text-lg sm:px-6 sm:pb-24 sm:pt-4 sm:text-xl">
       <section aria-label={lang === 'tl' ? 'Koneksyon ng sensor' : 'Sensor connection'} className="sensor-connection mb-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-        <div className="min-w-0 flex-1 break-words">
+        <div className="min-w-0 flex-1 wrap-break-word">
           <p role="status" className="font-semibold text-slate-900">{connectionTitle}</p>
           <p className="mt-1 leading-6">{connectionDescription}</p>
           {snapshot.deviceId && <p className="mt-2">{lang === 'tl' ? 'Device' : 'Device'}: {snapshot.deviceId}</p>}
@@ -186,7 +186,7 @@ export default function EnvironmentalMonitoring() {
     </div>
     <div className="environment-status-grid mt-4 grid gap-4">
   {/* Farm Status */}
-  <article className="relative overflow-hidden rounded-[24px] border border-emerald-100 bg-gradient-to-br from-emerald-50 to-green-100 p-6">
+  <article className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-linear-to-br from-emerald-50 to-green-100 p-6">
     <div className="absolute -bottom-3 -right-2 h-28 w-28 opacity-20">
       <Leaf3D />
     </div>
@@ -211,7 +211,7 @@ export default function EnvironmentalMonitoring() {
   </article>
 
   {/* Recommendation */}
-  <article className="flex items-center gap-4 rounded-[24px] border border-amber-100 bg-white p-6 shadow-[0_2px_5px_rgba(15,23,42,.06)]">
+  <article className="flex items-center gap-4 rounded-3xl border border-amber-100 bg-white p-6 shadow-[0_2px_5px_rgba(15,23,42,.06)]">
     <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 p-1.5">
       <Lightbulb3D />
     </div>

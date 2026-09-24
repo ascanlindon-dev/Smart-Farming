@@ -165,7 +165,7 @@ const WeatherForecastCard = ({ city }) => {
               return (
                 <div
                   key={idx}
-                  className="flex w-[180px] flex-shrink-0 flex-col items-center rounded-3xl shadow-lg transition-all hover:scale-105 hover:shadow-xl"
+                  className="flex w-45 shrink-0 flex-col items-center rounded-3xl shadow-lg transition-all hover:scale-105 hover:shadow-xl"
                 >
                   <div
                     className="flex w-full flex-col items-center justify-center rounded-3xl p-6 text-black"

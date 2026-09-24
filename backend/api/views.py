@@ -21,6 +21,7 @@ import json
 import os
 import re
 import math
+import secrets
 from collections import defaultdict
 from datetime import timedelta, datetime
 
@@ -39,6 +40,7 @@ from .recommendations import fallback_recommendation, recommend_with_openai
 from .sensor_data import current_reading, validate_telemetry
 from .otp_utils import create_and_send_otp, verify_otp_code
 from .prediction_storage import save_prediction, prediction_storage_status
+from .hosting_permissions import HostedAccountRequired
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
@@ -955,6 +957,7 @@ def prediction_history(request):
 
 
 @api_view(['POST'])
+@permission_classes([HostedAccountRequired])
 def nlp_summary(request):
 	try:
 		payload = request.data if hasattr(request, 'data') else json.loads(request.body.decode('utf-8'))
@@ -981,6 +984,7 @@ def nlp_summary(request):
 
 
 @api_view(['POST'])
+@permission_classes([HostedAccountRequired])
 def disease_recommendation(request):
 	"""Return safe, structured guidance after a classifier result.
 	The current sensor reading is read on the server. Client-provided environmental
@@ -1027,6 +1031,11 @@ def telemetry(request):
 	"""Accept JSON POST from devices and store as SensorReading."""
 	if request.method != 'POST':
 		return JsonResponse({'error': 'POST required'}, status=405)
+	device_key = getattr(settings, 'TELEMETRY_API_KEY', '')
+	if device_key or getattr(settings, 'TELEMETRY_REQUIRE_AUTH', False):
+		provided = request.headers.get('X-Telemetry-Key', '')
+		if not device_key or not secrets.compare_digest(provided.encode('utf-8'), device_key.encode('utf-8')):
+			return JsonResponse({'error': 'Device authentication required.'}, status=401)
 
 	try:
 		payload = json.loads(request.body.decode('utf-8'))
@@ -1042,6 +1051,7 @@ def telemetry(request):
 
 
 @api_view(['POST'])
+@permission_classes([HostedAccountRequired])
 def predict_leaf(request):
     """
     POST endpoint that accepts form file 'image'
@@ -1352,6 +1362,7 @@ _RAMBUTAN_MODEL_PATH = None
 
 
 @api_view(['POST'])
+@permission_classes([HostedAccountRequired])
 def predict_rambutan(request):
     """
     POST endpoint that accepts form file 'image'
