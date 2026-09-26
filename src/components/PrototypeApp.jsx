@@ -791,6 +791,7 @@ const PrototypeApp = ({ onBack, currentUser }) => {
 
           <TabsContent value="disease" className={activeTab === 'disease' ? 'space-y-4 sm:space-y-6' : 'hidden'} forceMount>
             <DiseaseDetection
+              isActive={activeTab === 'disease'}
               onAnalysisComplete={handleDiseaseAnalysisComplete}
               onRequestActiveTab={setActiveTab}
               onCaptureFlowChange={setIsTabSwitchLocked}

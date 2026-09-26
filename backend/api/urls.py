@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .prediction_stats import leaf_scan_stats
 
 urlpatterns = [
     path('', views.api_root),
@@ -9,6 +10,7 @@ urlpatterns = [
     path('sensors/', views.sensors),
     path('sensors/history/', views.sensor_history),
     path('predictions/history/', views.prediction_history),
+    path('predictions/leaf-stats/', leaf_scan_stats),
     path('nlp/summary/', views.nlp_summary),
     path('disease-recommendation/', views.disease_recommendation),
     path('telemetry/', views.telemetry),

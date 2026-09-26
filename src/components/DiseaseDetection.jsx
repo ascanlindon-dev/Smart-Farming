@@ -1,7 +1,8 @@
 import { apiFetch } from '../lib/apiFetch.mjs';
 import { useState, useRef, useContext, useEffect } from "react";
 import { LanguageContext } from '../LanguageContext';
-import { leafScanNotice, leafPreviewCard } from '../lib/leafScanResponse.mjs';
+import { leafScanNotice } from '../lib/leafScanResponse.mjs';
+import { useDiseaseStats } from '../hooks/useDiseaseStats.mjs';
 import { recommendationPresentation } from '../lib/recommendationPresentation.mjs';
 import ScanSaveStatus from './ScanSaveStatus';
 import { translations } from '../translation';
@@ -64,7 +65,7 @@ const AiPlant3DIcon = ({ className = 'h-12 w-12' }) => (
   </svg>
 );
 
-export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTab, onCaptureFlowChange }) {
+export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTab, onCaptureFlowChange, isActive = true }) {
   const { language } = useContext(LanguageContext);
   const t = translations[language];
   const [selectedImage, setSelectedImage] = useState(null);
@@ -84,6 +85,7 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
   const [typedDiagnosisLine, setTypedDiagnosisLine] = useState('');
   const [typedRiskLine, setTypedRiskLine] = useState('');
   const [typedActionLine, setTypedActionLine] = useState('');
+  const { stats, error: statsError, refresh: refreshStats } = useDiseaseStats(isActive);
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -254,7 +256,7 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
       image: sootyMoldImage,
       badgeClass: 'bg-slate-700',
     },
-  ].map((item) => leafPreviewCard(item, Boolean(result), selectedImage));
+  ];
 
   const localizedDiseaseContent = {
     'Algal Leaf Spot (Black Spots)': {
@@ -632,6 +634,7 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
 
         const res = await apiFetch('/api/predict_leaf/', { method: 'POST', body: fd });
         const data = await res.json().catch(() => ({}));
+        if (res.ok && data.storage?.saved) refreshStats();
         if (!res.ok) {
           const notice = {
             title: language === 'tl' ? 'Hindi nasuri ang larawan' : 'Photo could not be checked',
@@ -835,10 +838,23 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
             </div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-6 sm:gap-3 sm:grid-cols-4">
-            {[[t.detectionAccuracy, '94.5%'], [t.diseasesTracked, '12+'], [t.scansToday, '8'], [t.modelVersion, 'v2.1']].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-white bg-white/80 px-2 py-2 shadow-sm sm:px-4 sm:py-3"><p className="text-xs font-semibold text-slate-400">{label}</p><p className="mt-1 text-lg font-black text-emerald-700 sm:text-xl">{value}</p></div>
+            {[
+              [t.detectionAccuracy, '94.5%'],
+              [t.diseasesTracked, stats?.diseasesTracked ?? '\u2014', language === 'tl' ? 'Lahat ng na-save mong leaf scan na may sakit, kasama ang paulit-ulit na sakit.' : 'All your saved leaf scans with a disease, including repeated detections.'],
+              [t.scansToday, stats?.scansToday ?? '\u2014', language === 'tl' ? 'Mga na-save mong leaf scan ngayong araw sa iyong local timezone.' : 'Your saved leaf scans today in your local timezone.'],
+              [t.modelVersion, 'v2.1'],
+            ].map(([label, value, description]) => (
+              <div key={label} title={description} className="rounded-2xl border border-white bg-white/80 px-2 py-2 shadow-sm sm:px-4 sm:py-3"><p className="text-xs font-semibold text-slate-400">{label}</p><p className="mt-1 text-lg font-black text-emerald-700 sm:text-xl">{value}</p></div>
             ))}
           </div>
+          {statsError && (
+            <p role="status" className="mt-2 text-sm text-amber-800">
+              {language === 'tl' ? 'Hindi makuha ang bilang ng scans. ' : 'Scan counts could not be loaded. '}
+              <button type="button" onClick={refreshStats} className="font-semibold underline">
+                {language === 'tl' ? 'Subukan ulit' : 'Try again'}
+              </button>
+            </p>
+          )}
         </CardContent>
       </Card>
 
