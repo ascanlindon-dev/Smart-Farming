@@ -40,13 +40,13 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
 CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 
-GOOGLE_CLIENT_ID = os.environ.get(
-    'GOOGLE_CLIENT_ID',
-    '896466997047-ns5fbmfbp8shjjrq1seu29s2s5hdkte0.apps.googleusercontent.com',
+# A blank value in .env.example must use the same default as the browser.
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '').strip() or (
+    '896466997047-ns5fbmfbp8shjjrq1seu29s2s5hdkte0.apps.googleusercontent.com'
 )
 
-# Allow additional development hosts. For production, pin this down explicitly.
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.105.152.16', '192.168.137.57', '192.168.137.1']
+# Development only; production.py uses the Railway/custom public hostname.
+ALLOWED_HOSTS = ['localhost', '127.0.0.1'] if DEBUG else []
 if os.environ.get('DJANGO_ALLOWED_HOSTS'):
     ALLOWED_HOSTS = [host.strip() for host in os.environ['DJANGO_ALLOWED_HOSTS'].split(',') if host.strip()]
 

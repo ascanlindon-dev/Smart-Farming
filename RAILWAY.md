@@ -5,6 +5,39 @@ It installs CPU inference dependencies and downloads the pinned 577 MiB verifier
 during the build. Gunicorn uses one process to avoid duplicating model memory.
 There is no separate frontend service and no `VITE_API_BASE` to configure.
 
+## Redeploy after local development
+
+Push this checkout's changes to the branch connected to your existing Railway
+service, then deploy that latest commit. A redeploy of an older commit will not
+include these fixes. Keep the service root at the repository root and remove
+old custom build/start commands so Railway uses `Dockerfile` and its Gunicorn
+startup script. The script always selects `backend.production` and listens on
+Railway's `PORT`.
+
+Remove any old `VITE_API_BASE` variable. Every browser request now uses a relative
+`/api/...` URL, including login, signup, Google sign-in, scans, and both history
+tables. The local Vite proxy is development-only and is not part of the deployed
+server. Production CSRF/CORS origins come from the public HTTPS hostnames.
+
+Use the existing Supabase database's `DATABASE_URL` to retain its sensor readings;
+an empty new database will have no history. Do not copy the local `.env` into
+Railway. Leave `SENSOR_DB_ENGINE` and `PREDICTION_SYNC_DATABASE` unset on the
+hosted service, and supply the public hostname and credentials listed below.
+
+Useful routes after deployment:
+
+| Path | Expected behavior |
+| --- | --- |
+| `/` and browser navigation paths | React app; refreshing a nested path loads the app |
+| `/api/ping/` | API availability check |
+| `/api/csrf/` | Session-safe token for login and other writes |
+| `/api/predictions/transactions/?page_size=50` | Latest predictions for the signed-in account |
+| `/api/sensors/readings/?page_size=50` | Latest readings from the existing sensor table; requires login |
+| `/healthz/` | Railway readiness check |
+
+Unknown API URLs and missing static files return 404. The old `/api/ping`,
+`/api/login`, and `/api/logout` URLs remain supported without redirects.
+
 ## Before the first deployment
 
 Use the clean `Smart-Farming` repository, not the archived original folder.

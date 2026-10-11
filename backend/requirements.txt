@@ -8,6 +8,8 @@ google-auth==2.58.0
 google-auth-oauthlib==1.4.1
 google-api-python-client==2.200.0
 tensorflow==2.20.0
+# Match the Keras version used to save the bundled leaf and fruit models.
+keras==3.13.2
 numpy==2.4.2
 Pillow==12.1.0
 requests==2.32.5

@@ -7,7 +7,6 @@ import { Leaf } from "lucide-react";
 import rambutanImage from "figma:asset/a8803903c13af0b87fc355b5d6d1dbf82a50518f.png";
 
 export default function ForgotPassword({ onSwitchToLogin }) {
-  const API_BASE = import.meta.env.VITE_API_BASE || "";
   const [stage, setStage] = useState("request"); // 'request' | 'reset' | 'done'
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -33,7 +32,7 @@ export default function ForgotPassword({ onSwitchToLogin }) {
     setError("");
     setSubmitting(true);
     try {
-      const res = await apiFetch(`${API_BASE}/api/password_reset/request/`, {
+      const res = await apiFetch('/api/password_reset/request/', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
@@ -60,7 +59,7 @@ export default function ForgotPassword({ onSwitchToLogin }) {
     setError("");
     setResendingCode(true);
     try {
-      const res = await apiFetch(`${API_BASE}/api/otp/request/`, {
+      const res = await apiFetch('/api/otp/request/', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase(), purpose: "reset" }),
@@ -91,7 +90,7 @@ export default function ForgotPassword({ onSwitchToLogin }) {
     setError("");
     setSubmitting(true);
     try {
-      const res = await apiFetch(`${API_BASE}/api/password_reset/confirm/`, {
+      const res = await apiFetch('/api/password_reset/confirm/', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

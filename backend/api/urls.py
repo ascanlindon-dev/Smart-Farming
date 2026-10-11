@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 from .prediction_stats import leaf_scan_stats
+from .prediction_transactions import prediction_transactions
+from .sensor_readings import sensor_readings
 
 urlpatterns = [
     path('', views.api_root),
@@ -9,7 +11,9 @@ urlpatterns = [
     path('me/', views.me),
     path('sensors/', views.sensors),
     path('sensors/history/', views.sensor_history),
+    path('sensors/readings/', sensor_readings),
     path('predictions/history/', views.prediction_history),
+    path('predictions/transactions/', prediction_transactions),
     path('predictions/leaf-stats/', leaf_scan_stats),
     path('nlp/summary/', views.nlp_summary),
     path('disease-recommendation/', views.disease_recommendation),
@@ -20,6 +24,10 @@ urlpatterns = [
     path('confirm_prediction/', views.confirm_prediction),
     path('signup/', views.signup),
     path('auth/google/', views.google_auth),
+    path('ping/', views.ping, name='ping'),
+    path('login/', views.login, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    # Keep older clients working without redirecting POST bodies.
     path('ping', views.ping),
     path('login', views.login),
     path('logout', views.logout_view),

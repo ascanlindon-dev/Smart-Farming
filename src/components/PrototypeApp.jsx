@@ -441,7 +441,7 @@ const PrototypeApp = ({ onBack, currentUser }) => {
   const logoutUser = async () => {
     // Ask backend to clear session cookie (HttpOnly) and server-side session
     try {
-      await apiFetch('/api/logout', {
+      await apiFetch('/api/logout/', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Accept': 'application/json' }

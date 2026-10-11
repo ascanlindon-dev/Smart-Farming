@@ -31,6 +31,8 @@ import { Leaf3D, Lightbulb3D, Rambutan3D, RainCloud3D, Thermometer3D, WaterDrop3
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
+import PredictionTransactions from './PredictionTransactions';
+import SensorReadings from './SensorReadings';
 
 const translations = {
   en: {
@@ -939,6 +941,9 @@ export default function HistoricalData() {
           </div>
         </CardHeader>
       </Card>
+
+      <PredictionTransactions />
+      <SensorReadings />
 
       {!hasAnyData ? (
         <Card className="border-slate-200 bg-white/85 shadow-sm backdrop-blur-sm">

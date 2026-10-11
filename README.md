@@ -78,13 +78,21 @@ five minutes and also has a manual refresh button.
 Open-Meteo supplies the forecast; see [weather setup](backend/WEATHER.md).
 Add the PC's LAN address to `DJANGO_ALLOWED_HOSTS` for phone/device access.
 The Vite proxy preserves the request host for session and CSRF validation.
-If using `VITE_API_BASE` for a separate backend origin, configure
-`DJANGO_CSRF_TRUSTED_ORIGINS` with the frontend origin as well.
+All browser API requests use relative `/api/` paths on the app's origin.
+`VITE_API_BASE` is no longer used; remove it from any old frontend environment.
+The development proxy is only used by `npm run dev`, never by the Railway build.
 
 Login establishes a Django session. Browser storage alone does not authorize
 profile access. Existing browser-only logins need to sign in again. Prediction
 history belongs to the signed-in user; older anonymous records are not assigned
 to an arbitrary farmer. Gmail signup/reset needs OAuth configuration.
+Farm Overview includes a Prediction Transactions table with prediction type,
+label, image filename, and creation time for that account.
+The Sensor Readings table below it shows temperature, humidity, raw rain values,
+and received time from the configured sensor database. Both tables show the latest
+10 records by default, expand to the latest 50, and can be minimized independently.
+Each table has a manual refresh button, and records are ordered newest first.
+Sensor readings are shared farm data; the sensor table has no user ownership field.
 AI recommendations use `OPENAI_API_KEY` when available and identify built-in
 guidance when the provider is unavailable.
 

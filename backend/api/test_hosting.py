@@ -7,7 +7,8 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.db import DatabaseError
-from django.test import SimpleTestCase, TestCase, override_settings
+from django.test import Client, SimpleTestCase, TestCase, override_settings
+from django.urls import resolve
 from rest_framework.test import APIClient
 
 from api.models import Prediction, SensorReading
@@ -15,14 +16,14 @@ from api.prediction_storage import save_prediction
 
 
 class ProductionStartupTests(SimpleTestCase):
-    def check_settings(self, **overrides):
+    def check_settings(self, code='import backend.production', **overrides):
         environment = dict(os.environ, DJANGO_SECRET_KEY='test-only-hosting-secret-with-more-than-fifty-characters-123456789',
                            DJANGO_DEBUG='false', DATABASE_URL='postgresql://127.0.0.1:1/test',
                            DB_ENGINE='sqlite', SENSOR_DB_ENGINE='', PREDICTION_SYNC_DATABASE='',
                            DJANGO_ALLOWED_HOSTS='hosting.example.test', RAILWAY_PUBLIC_DOMAIN='',
                            TELEMETRY_API_KEY='test-device-key-long-enough-for-production')
         environment.update(overrides)
-        return subprocess.run([sys.executable, '-B', '-c', 'import backend.production'],
+        return subprocess.run([sys.executable, '-B', '-c', code],
                               cwd=Path(__file__).resolve().parents[1], env=environment,
                               capture_output=True, text=True, timeout=15)
 
@@ -39,6 +40,19 @@ class ProductionStartupTests(SimpleTestCase):
     def test_production_refuses_the_old_split_database_configuration(self):
         result = self.check_settings(PREDICTION_SYNC_DATABASE='sensors')
         self.assertNotEqual(result.returncode, 0)
+
+    def test_railway_domain_configures_https_without_old_development_origins(self):
+        result = self.check_settings(
+            DJANGO_ALLOWED_HOSTS='', RAILWAY_PUBLIC_DOMAIN='farm.up.railway.app',
+            DJANGO_CSRF_TRUSTED_ORIGINS='http://localhost:3000',
+            code="""import backend.production as settings
+assert settings.ALLOWED_HOSTS == ['farm.up.railway.app', 'healthcheck.railway.app']
+assert settings.CSRF_TRUSTED_ORIGINS == ['https://farm.up.railway.app']
+assert settings.CORS_ALLOWED_ORIGINS == settings.CSRF_TRUSTED_ORIGINS
+assert settings.SESSION_COOKIE_SECURE and settings.CSRF_COOKIE_SECURE
+assert not settings.DEBUG
+""")
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 @override_settings(TELEMETRY_REQUIRE_AUTH=True, TELEMETRY_API_KEY='test-device-key-for-hosting-requests')
@@ -116,7 +130,64 @@ class HostedRoutingTests(TestCase):
         self.assertEqual(self.client.get('/').status_code, 301)
 
     def test_unknown_api_routes_remain_404_instead_of_serving_html(self):
-        self.assertEqual(self.client.get('/api/not-a-route/', secure=True).status_code, 404)
+        for path in ('/api/not-a-route/', '/api/not-a-route', '/assets/missing.js',
+                     '/static/missing.css', '/missing.png', '/healthz/missing'):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path, secure=True).status_code, 404)
+
+    def test_browser_navigation_can_refresh_nested_paths(self):
+        for path in ('/login', '/dashboard/', '/dashboard/history'):
+            with self.subTest(path=path):
+                response = self.client.get(path, HTTP_X_FORWARDED_PROTO='https')
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(b'test frontend', b''.join(response.streaming_content))
+                response.close()
+        self.assertEqual(self.client.post('/dashboard/', secure=True).status_code, 405)
+
+    def test_auth_routes_support_both_slash_forms_without_post_redirects(self):
+        for path in ('ping', 'login', 'logout'):
+            self.assertEqual(resolve(f'/api/{path}/').func, resolve(f'/api/{path}').func)
+        for path in ('/api/login', '/api/login/'):
+            self.assertEqual(self.client.post(path, {}, secure=True).status_code, 400)
+        self.assertEqual(self.client.get('/api/ping/', secure=True).status_code, 200)
+
+    def test_hosted_tables_require_login_and_keep_api_json_responses(self):
+        for path in ('/api/predictions/transactions/?page_size=50', '/api/sensors/readings/?page_size=50'):
+            with self.subTest(path=path):
+                response = self.client.get(path, secure=True)
+                self.assertEqual(response.status_code, 403)
+                self.assertIn('application/json', response['Content-Type'])
+        self.client.force_login(User.objects.create_user('table-farmer'))
+        for path in ('/api/predictions/transactions/?page_size=50', '/api/sensors/readings/?page_size=50'):
+            response = self.client.get(path, secure=True)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()['results'], [])
+
+    def test_https_session_write_requires_csrf_and_succeeds_with_the_token(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(User.objects.create_user('session-farmer'))
+        self.assertEqual(client.post('/api/logout/', secure=True).status_code, 403)
+        token = client.get('/api/csrf/', secure=True).json()['csrfToken']
+        response = client.post('/api/logout/', secure=True, HTTP_X_CSRFTOKEN=token,
+                               HTTP_ORIGIN='https://testserver', HTTP_ACCEPT='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(client.get('/api/me/', secure=True).status_code, 403)
+
+    def test_whitenoise_serves_built_assets_before_the_frontend_fallback(self):
+        from django.conf import settings
+
+        (self.build / 'assets').mkdir()
+        (self.build / 'static').mkdir()
+        (self.build / 'assets' / 'app-test.js').write_text('window.appLoaded = true;', encoding='utf-8')
+        with override_settings(
+            DEBUG=False, WHITENOISE_ROOT=self.build, STATIC_ROOT=self.build / 'static',
+            MIDDLEWARE=['whitenoise.middleware.WhiteNoiseMiddleware'] + settings.MIDDLEWARE,
+        ):
+            response = Client().get('/assets/app-test.js', secure=True)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('javascript', response['Content-Type'])
+            self.assertEqual(b''.join(response.streaming_content), b'window.appLoaded = true;')
+            response.close()
 
     def test_railway_healthcheck_does_not_redirect_and_checks_database(self):
         with patch('image_verifier.WEIGHTS', self.build / 'index.html'):

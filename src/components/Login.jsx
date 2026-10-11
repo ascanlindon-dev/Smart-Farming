@@ -12,7 +12,6 @@ import { Eye, EyeOff, Leaf } from "lucide-react";
 import rambutanImage from "figma:asset/a8803903c13af0b87fc355b5d6d1dbf82a50518f.png";
 
 export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
-  const API_BASE = import.meta.env.VITE_API_BASE || "";
   const [identifier, setIdentifier] = useState(""); // email or mobile
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -35,7 +34,7 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
 
   // Check backend availability on mount
   useEffect(() => {
-    apiFetch(API_BASE + '/api/ping', { method: 'GET' })
+    apiFetch('/api/ping/', { method: 'GET' })
       .then((r) => {
         if (!r.ok) throw new Error('Ping failed');
         setBackendUp(true);
@@ -61,7 +60,7 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
     const controller = new AbortController();
     const requestTimeout = setTimeout(() => controller.abort(), 10000);
 
-    const url = `${API_BASE}/api/login`;
+    const url = '/api/login/';
     try {
       const res = await apiFetch(url, {
         method: "POST",
@@ -112,7 +111,7 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
     if (!otpCode.trim()) return;
     setOtpError("");
     setVerifyingOtp(true);
-    const url = `${API_BASE}/api/otp/verify/`;
+    const url = '/api/otp/verify/';
     try {
       const res = await apiFetch(url, {
         method: "POST",
@@ -179,7 +178,7 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
     if (resendCooldown > 0) return; // Prevent clicks during cooldown
     setOtpError("");
     setResendingOtp(true);
-    const url = `${API_BASE}/api/otp/request/`;
+    const url = '/api/otp/request/';
     try {
       const res = await apiFetch(url, {
         method: "POST",
@@ -298,8 +297,8 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
             </div>
               {!backendUp && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
-                  <strong>Backend unreachable:</strong> The API server is not responding.
-                  <div className="mt-2 text-sm">Make sure the backend is running: <code>python manage.py runserver 0.0.0.0:8000</code>.</div>
+                  <strong>Service temporarily unavailable.</strong>
+                  <div className="mt-2 text-sm">We could not connect to the server. Please refresh the page and try again.</div>
                 </div>
               )}
             <form onSubmit={handleSubmit} className="space-y-4">

@@ -50,7 +50,6 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Signup({ onSignup, onSwitchToLogin }) {
   const { language: contextLanguage } = useContext(LanguageContext);
-  const API_BASE = import.meta.env.VITE_API_BASE || "";
   // 🌾 Remember language preference (default Tagalog)
   const [language, setLanguage] = useState(() => {
     const saved = localStorage.getItem("language");
@@ -78,7 +77,7 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
-    apiFetch(API_BASE + '/api/ping', { method: 'GET' })
+    apiFetch('/api/ping/', { method: 'GET' })
       .then((r) => {
         if (!r.ok) throw new Error('Ping failed');
         setBackendUp(true);
@@ -120,8 +119,7 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
     setError("");
 
     // Send signup data to backend
-    // Compute API base: prefer VITE_API_BASE, else same-host (if port present) or default to :`8000`
-    const url = `${API_BASE}/api/signup/`;
+    const url = '/api/signup/';
     console.debug('Signup request', url, { email: normalizedContact, name: normalizedName });
     try {
       const res = await apiFetch(url, {
@@ -156,7 +154,7 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
   const handleGoogleSignIn = async (credential) => {
     setError("");
     try {
-      const res = await apiFetch(`${API_BASE}/api/auth/google/`, {
+      const res = await apiFetch('/api/auth/google/', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ credential }),
@@ -174,7 +172,7 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
     if (!otpCode.trim()) return;
     setOtpError("");
     setVerifyingOtp(true);
-    const url = `${API_BASE}/api/otp/verify/`;
+    const url = '/api/otp/verify/';
     try {
       const res = await apiFetch(url, {
         method: "POST",
@@ -205,7 +203,7 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
     if (resendCooldown > 0) return; // Prevent clicks during cooldown
     setOtpError("");
     setResendingOtp(true);
-    const url = `${API_BASE}/api/otp/request/`;
+    const url = '/api/otp/request/';
     try {
       const res = await apiFetch(url, {
         method: "POST",
@@ -342,8 +340,8 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
 
             {!backendUp && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
-                <strong>Backend unreachable:</strong> The API server is not responding.
-                <div className="mt-2 text-sm">Start the backend with <code>python manage.py runserver 0.0.0.0:8000</code>.</div>
+                <strong>Service temporarily unavailable.</strong>
+                <div className="mt-2 text-sm">We could not connect to the server. Please refresh the page and try again.</div>
               </div>
             )}
 

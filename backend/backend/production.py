@@ -29,8 +29,10 @@ if railway_domain:
 if not ALLOWED_HOSTS or any('*' in host or '/' in host or host.startswith('.') for host in ALLOWED_HOSTS):
     raise ImproperlyConfigured('Set DJANGO_ALLOWED_HOSTS to the public hostname, without a scheme or wildcard.')
 ALLOWED_HOSTS.append('healthcheck.railway.app')
+# Browser requests use this service's HTTPS origin. Do not inherit development
+# CORS/CSRF origins from an old service variable.
 CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(
-    CSRF_TRUSTED_ORIGINS + [f'https://{host}' for host in ALLOWED_HOSTS if host != 'healthcheck.railway.app']
+    f'https://{host}' for host in ALLOWED_HOSTS if host != 'healthcheck.railway.app'
 ))
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
