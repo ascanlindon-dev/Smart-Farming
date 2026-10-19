@@ -10,6 +10,9 @@ const translations = {
   en: {
     title: 'Prediction Transactions',
     description: 'Your latest 50 saved leaf disease and fruit maturity scans, newest first.',
+    totalTransactions: 'Total Transactions',
+    leafTransactions: 'Leaf',
+    fruitTransactions: 'Fruit',
     predictionType: 'Prediction Type',
     label: 'Label',
     imageName: 'Image Name',
@@ -29,6 +32,9 @@ const translations = {
   tl: {
     title: 'Mga Transaksyon ng Prediksyon',
     description: 'Ang pinakabagong 50 naka-save na scan ng sakit sa dahon at pagkahinog ng bunga sa iyong account, pinakabago muna.',
+    totalTransactions: 'Kabuuang Transaksyon',
+    leafTransactions: 'Dahon',
+    fruitTransactions: 'Prutas',
     predictionType: 'Uri ng Prediksyon',
     label: 'Label',
     imageName: 'Pangalan ng Larawan',
@@ -155,6 +161,20 @@ export default function PredictionTransactions() {
                 )}
               </TableBody>
             </Table>
+            <dl className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm sm:grid-cols-3 sm:gap-6">
+              {[
+                [t.totalTransactions, data.count],
+                [t.leafTransactions, data.leaf_count],
+                [t.fruitTransactions, data.fruit_count],
+              ].map(([label, count]) => (
+                <div key={label} className="flex items-baseline gap-2">
+                  <dt className="font-medium text-slate-700">{label}</dt>
+                  <dd className="font-semibold tabular-nums text-slate-900">
+                    = {new Intl.NumberFormat(language === 'tl' ? 'fil-PH' : 'en-PH').format(count ?? 0)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
             <div className="flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p role="status">{t.showing(visibleRecords.length, recentRecords.length)}</p>

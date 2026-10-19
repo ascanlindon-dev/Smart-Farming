@@ -32,7 +32,8 @@ class PredictionTransactionsTests(TestCase):
         response = self.client.get(self.endpoint)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {
-            'count': 0, 'page': 1, 'page_size': 20, 'total_pages': 1, 'results': [],
+            'count': 0, 'leaf_count': 0, 'fruit_count': 0,
+            'page': 1, 'page_size': 20, 'total_pages': 1, 'results': [],
         })
         self.assertEqual(response['Cache-Control'], 'no-store')
 
