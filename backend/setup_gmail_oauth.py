@@ -35,7 +35,10 @@ def main():
          )
 
    flow = InstalledAppFlow.from_client_secrets_file(str(credential_file), SCOPES)
-   creds = flow.run_local_server(port=0)
+   # Force a fresh consent grant so a newly-created OAuth client receives a
+   # refresh token associated with that client, rather than reusing an older
+   # authorization grant.
+   creds = flow.run_local_server(port=0, prompt='consent')
    sender_email = input('Enter the Gmail account you just authorized: ').strip()
    if not sender_email:
       raise ValueError('A sender Gmail address is required.')
