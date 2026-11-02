@@ -86,6 +86,11 @@ function App() {
     setAuthState("authenticated");
     setCurrentUser(user || null);
     persistSession(user || null, rememberMe);
+    try {
+      localStorage.setItem('prototype_active_tab', 'dashboard');
+    } catch (e) {
+      // Ignore storage issues; the dashboard remains the default tab.
+    }
   };
 
   const handleSignup = (user) => {
@@ -93,9 +98,9 @@ function App() {
     setCurrentUser(user || null);
     persistSession(user || null);
     try {
-      localStorage.setItem('prototype_active_tab', 'monitoring');
+      localStorage.setItem('prototype_active_tab', 'dashboard');
     } catch (e) {
-      // Ignore storage write issues and keep the default monitoring tab.
+      // Ignore storage write issues and keep the default dashboard tab.
     }
   };
 

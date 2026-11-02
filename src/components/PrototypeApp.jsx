@@ -9,9 +9,10 @@ import WeatherAlerts from './WeatherAlerts';
 import DiseaseDetection from './DiseaseDetection';
 import MaturityDetection from './MaturityDetection';
 import HistoricalData from './HistoricalData';
+import FarmDashboard from './FarmDashboard';
 import { Toaster } from './ui/sonner';
 import { toast } from 'sonner';
-import { Leaf, CloudRain, Activity, BarChart3, User, LogOut, Edit, Globe, Bell, KeyRound, MapPin, Save, X, Camera, Menu } from 'lucide-react';
+import { Leaf, CloudRain, Activity, BarChart3, LayoutDashboard, User, LogOut, Edit, Globe, Bell, KeyRound, MapPin, Save, X, Camera, Menu } from 'lucide-react';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import appLogo from '../assets/app-logo.png';
@@ -42,6 +43,7 @@ const resolveWeatherQuery = async (fallbackQuery = DEFAULT_WEATHER_QUERY) => {
 };
 
 const appTabs = [
+  { value: 'dashboard', icon: LayoutDashboard, color: 'emerald', labelKey: 'dashboard', sidebarLabel: 'Dashboard' },
   { value: 'monitoring', icon: Activity3D, color: 'emerald', labelKey: 'environmentalMonitoring', sidebarLabel: 'Environmental Monitoring' },
   { value: 'weather', icon: RainCloud3D, color: 'blue', labelKey: 'weatherAlerts', sidebarLabel: 'Weather' },
   { value: 'disease', icon: Leaf3D, color: 'green', labelKey: 'diseaseDetection', sidebarLabel: 'Leaf Disease Monitoring' },
@@ -208,7 +210,7 @@ const PrototypeApp = ({ onBack, currentUser }) => {
   const t = translations[language] || translations.en;
 
   const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window === 'undefined') return 'monitoring';
+    if (typeof window === 'undefined') return 'dashboard';
 
     try {
       const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
@@ -219,7 +221,7 @@ const PrototypeApp = ({ onBack, currentUser }) => {
       // Ignore storage read issues and keep the default tab.
     }
 
-    return 'monitoring';
+    return 'dashboard';
   });
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -780,6 +782,15 @@ const PrototypeApp = ({ onBack, currentUser }) => {
             </div>
           </header>
           <main className="mx-auto w-full max-w-6xl px-3 py-4 sm:px-6 sm:py-5 md:px-10">
+
+          <TabsContent value="dashboard" className="mt-0 space-y-4 sm:space-y-6">
+            <FarmDashboard
+              farmerName={farmer.name}
+              location={location}
+              notifications={notifications}
+              onNavigate={setActiveTab}
+            />
+          </TabsContent>
 
           <TabsContent value="monitoring" className="mt-0 space-y-4 sm:space-y-6">
             <EnvironmentalMonitoring />
