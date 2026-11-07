@@ -35,6 +35,12 @@ if not SECRET_KEY:
 DEBUG = os.environ.get('DJANGO_DEBUG', 'true').lower() == 'true'
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
+# Temporary local fallback for environments without a connected sensor device.
+# Production keeps this off unless explicitly enabled via the environment.
+SENSOR_SIMULATION_ENABLED = os.environ.get(
+    'SENSOR_SIMULATION_ENABLED', 'true' if DEBUG else 'false'
+).lower() == 'true'
+SENSOR_SIMULATION_INTERVAL_SECONDS = 20
 # Allow Google sign-in popups to return their result to this window.
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]

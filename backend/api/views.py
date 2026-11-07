@@ -10,6 +10,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.conf import settings
+from django.db import router, transaction
 from django.shortcuts import redirect
 from django.contrib.auth.models import User
 
@@ -19,6 +20,7 @@ from django.http import JsonResponse
 from pathlib import Path
 import json
 import os
+import random
 import re
 import math
 import secrets
@@ -748,12 +750,36 @@ def _leaf_likeness_score(pil_img):
 		return 0.0
 
 
+def _latest_sensor_reading():
+	"""Return the latest reading, optionally filling the temporary sensor gap."""
+	if not getattr(settings, 'SENSOR_SIMULATION_ENABLED', False):
+		return SensorReading.objects.order_by('-received_at', '-id').first()
+
+	interval = max(1, int(getattr(settings, 'SENSOR_SIMULATION_INTERVAL_SECONDS', 20)))
+	sensor_db = router.db_for_write(SensorReading) or 'default'
+	readings = SensorReading.objects.using(sensor_db)
+	with transaction.atomic(using=sensor_db):
+		# Lock the latest row so concurrent dashboard polls do not create a row
+		# every time they arrive at the simulation interval.
+		latest = readings.select_for_update().order_by('-received_at', '-id').first()
+		if latest is not None:
+			age = (timezone.now() - latest.received_at).total_seconds()
+			if age < interval:
+				return latest
+
+		return readings.create(
+			device_id='temporary-simulator',
+			temperature=round(random.uniform(27.0, 30.0), 2),
+			humidity=round(random.uniform(67.0, 80.0), 2),
+		)
+
+
 @api_view(['GET', 'POST'])
 def sensors(request):
 	# Only handle GET for sensor data
 	if request.method == 'GET':
 		try:
-			latest = SensorReading.objects.order_by('-received_at').first()
+			latest = _latest_sensor_reading()
 			if latest:
 				response = {
 					'temperature': latest.temperature,

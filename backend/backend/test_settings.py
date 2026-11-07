@@ -5,3 +5,4 @@ DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memor
 DATABASES['prediction_cloud'] = {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}
 PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 PREDICTION_SYNC_DATABASE = ''
+SENSOR_SIMULATION_ENABLED = False

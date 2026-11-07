@@ -4,7 +4,7 @@ from datetime import timedelta
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase, SimpleTestCase
+from django.test import TestCase, SimpleTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -75,6 +75,29 @@ class SensorAndSessionTests(TestCase):
 
     def test_no_sensor_data_is_not_reported_as_zero(self):
         self.assertEqual(self.client.get('/api/sensors/').json(), {})
+
+    @override_settings(SENSOR_SIMULATION_ENABLED=True, SENSOR_SIMULATION_INTERVAL_SECONDS=20)
+    @patch('api.views.random.uniform', side_effect=[27.1234, 67.8912, 29.8765, 79.4567])
+    def test_enabled_sensor_simulator_persists_decimal_readings_every_20_seconds(self, uniform):
+        first = self.client.get('/api/sensors/')
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(first.json()['temperature'], 27.12)
+        self.assertEqual(first.json()['humidity'], 67.89)
+        self.assertEqual(first.json()['device_id'], 'temporary-simulator')
+        self.assertEqual(SensorReading.objects.count(), 1)
+
+        second = self.client.get('/api/sensors/')
+        self.assertEqual(second.json()['temperature'], 27.12)
+        self.assertEqual(second.json()['humidity'], 67.89)
+        self.assertEqual(SensorReading.objects.count(), 1)
+        self.assertEqual(uniform.call_count, 2)
+
+        SensorReading.objects.update(received_at=timezone.now() - timedelta(seconds=21))
+        third = self.client.get('/api/sensors/')
+        self.assertEqual(third.json()['temperature'], 29.88)
+        self.assertEqual(third.json()['humidity'], 79.46)
+        self.assertEqual(SensorReading.objects.count(), 2)
+        self.assertEqual(uniform.call_count, 4)
 
     def test_sensor_history_does_not_sum_raw_rain_as_millimeters(self):
         SensorReading.objects.create(temperature=29, humidity=65, rain=1023)

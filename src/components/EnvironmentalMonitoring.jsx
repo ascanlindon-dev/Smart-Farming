@@ -155,7 +155,7 @@ export default function EnvironmentalMonitoring() {
           </div>
           <span className={statBadgeClass}>{humidityStat.label}</span>
         </div>
-        <div className={statValueClass}>{displayedHumidity != null ? `${Math.round(displayedHumidity)}%` : L.noData}</div>
+        <div className={statValueClass}>{displayedHumidity != null ? `${Number(displayedHumidity).toFixed(1)}%` : L.noData}</div>
         <div className={statActionClass}>{humidityStat.action}</div>
       </div>
 
