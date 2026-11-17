@@ -1188,7 +1188,6 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
                           <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">{aiRecommendation.notice}</p>
                         )}
                         <div className="grid gap-2 sm:grid-cols-2">
-                          <p><span className="font-semibold text-slate-900">{language === 'tl' ? 'Confidence' : 'Confidence'}:</span> {Number.isFinite(Number(aiRecommendation.confidence)) ? `${Number(aiRecommendation.confidence).toFixed(1)}%` : '—'}</p>
                           <p><span className="font-semibold text-slate-900">AI Preliminary Severity Assessment:</span> {aiRecommendation.severity?.level || (language === 'tl' ? 'Hindi maaasahang matukoy mula sa larawan' : 'Cannot be reliably assessed from this image')}</p>
                           <p className="sm:col-span-2"><span className="font-semibold text-slate-900">{language === 'tl' ? 'Kondisyon' : 'Condition'}:</span> {aiRecommendation.stage?.label || (language === 'tl' ? 'Hindi maaasahang matukoy mula sa larawan' : 'Cannot be reliably determined from this image')}</p>
                         </div>
@@ -1203,7 +1202,21 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
                             <ul className="mt-1 space-y-1">{items.slice(0, 3).map((item) => <li key={item} className="flex gap-2"><span className="text-emerald-600">•</span><span>{item}</span></li>)}</ul>
                           </div>
                         ))}
-                        <div><p className="font-semibold text-slate-900">{language === 'tl' ? 'Anong Gagamitin?' : 'Treatment'}</p><p>{aiRecommendation.chemical_treatment?.message || aiRecommendation.treatment?.details?.[0]}</p></div>
+                        <div>
+                          <p className="font-semibold text-slate-900">Treatment</p>
+                          {Array.isArray(aiRecommendation.treatment?.details) && aiRecommendation.treatment.details.length > 0 ? (
+                            <ul className="mt-1 space-y-1">
+                              {aiRecommendation.treatment.details.slice(0, 3).map((item) => (
+                                <li key={item} className="flex gap-2"><span className="text-emerald-600">•</span><span>{item}</span></li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p>{language === 'tl' ? 'Walang treatment details na available.' : 'No treatment details are available.'}</p>
+                          )}
+                          {aiRecommendation.chemical_treatment?.message && (
+                            <p className="mt-1 text-xs text-slate-500">{aiRecommendation.chemical_treatment.message}</p>
+                          )}
+                        </div>
                         <div><p className="font-semibold text-slate-900">{language === 'tl' ? 'Kailan Kumonsulta?' : 'When to seek help'}</p><p>{aiRecommendation.when_to_seek_help}</p></div>
                         <div><p className="font-semibold text-slate-900">{language === 'tl' ? 'Kaligtasan' : 'Safety'}</p><p>{aiRecommendation.safety_precautions?.[0]}</p></div>
                       </div>
