@@ -662,11 +662,11 @@ const PrototypeApp = ({ onBack, currentUser }) => {
             <p className="mt-1 text-[10px] font-semibold tracking-wide text-emerald-100/70">SMART FARMING SYSTEM</p>
           </div>
           <p className="mb-3 text-[10px] font-bold tracking-[0.14em] text-emerald-100/55">MAIN MODULES</p>
-          <TabsList ref={appTabsRef} className="flex h-auto w-full flex-col items-stretch gap-1 bg-transparent p-0">
+          <TabsList ref={appTabsRef} className="flex h-auto w-full flex-col items-start gap-1 bg-transparent p-0">
             {appTabs.map((tab) => {
               const Icon = tab.icon;
               return <TabsTrigger key={tab.value} data-app-tab={tab.value} value={tab.value} disabled={isTabSwitchLocked && tab.value !== activeTab}
-                className="group flex h-auto w-full justify-start gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-emerald-100/65 shadow-none transition hover:bg-white/10 hover:text-white data-[state=active]:bg-white/15 data-[state=active]:text-white data-[state=active]:shadow-none">
+                className="group flex h-auto w-fit max-w-full self-start justify-start gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-emerald-100/65 shadow-none transition hover:bg-white/10 hover:text-white data-[state=active]:bg-white/15 data-[state=active]:text-white data-[state=active]:shadow-none">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center text-emerald-200 group-data-[state=active]:text-emerald-300"><Icon className="size-7 block" /></span>
                 <span>{tab.sidebarLabel}</span>
                 {activeTab === tab.value && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400" />}
@@ -688,8 +688,8 @@ const PrototypeApp = ({ onBack, currentUser }) => {
                 <button onClick={() => setMobileSidebarOpen(false)} aria-label="Close menu" className="rounded-lg p-2 text-emerald-100 hover:bg-white/10"><X className="h-5 w-5" /></button>
               </div>
               <p className="mb-3 text-[10px] font-bold tracking-[.14em] text-emerald-100/55">MAIN MODULES</p>
-              <TabsList className="flex h-auto w-full flex-col items-stretch gap-1 bg-transparent p-0">
-                {appTabs.map((tab) => { const Icon = tab.icon; return <TabsTrigger key={tab.value} value={tab.value} onClick={() => setMobileSidebarOpen(false)} className="group flex h-auto w-full justify-start gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-emerald-100/65 data-[state=active]:bg-white/15 data-[state=active]:text-white"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 p-0.5 text-emerald-100 opacity-100"><Icon className="size-7 block opacity-100" /></span><span>{tab.sidebarLabel}</span>{activeTab === tab.value && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400" />}</TabsTrigger>; })}
+              <TabsList className="flex h-auto w-full flex-col items-start gap-1 bg-transparent p-0">
+                {appTabs.map((tab) => { const Icon = tab.icon; return <TabsTrigger key={tab.value} value={tab.value} onClick={() => setMobileSidebarOpen(false)} className="group flex h-auto w-fit max-w-full self-start justify-start gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-emerald-100/65 data-[state=active]:bg-white/15 data-[state=active]:text-white"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 p-0.5 text-emerald-100 opacity-100"><Icon className="size-7 block opacity-100" /></span><span>{tab.sidebarLabel}</span>{activeTab === tab.value && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400" />}</TabsTrigger>; })}
               </TabsList>
               <button onClick={() => { setMobileSidebarOpen(false); setShowAccountModal(true); }} className="mt-auto flex items-center gap-3 rounded-xl p-2 text-left hover:bg-white/10"><img src={farmer.photo || DEFAULT_PROFILE_AVATAR} alt="Farmer" className="h-9 w-9 rounded-full object-cover" /><span><span className="block text-sm font-bold">{farmer.name}</span><span className="block text-xs text-emerald-100/65">Farmer</span></span></button>
             </aside>
