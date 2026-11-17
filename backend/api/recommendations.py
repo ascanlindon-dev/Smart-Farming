@@ -25,6 +25,14 @@ SOURCES = {
     },
 }
 
+AI_SEVERITY_LEVELS = {
+    'low': 'Low',
+    'moderate': 'Moderate',
+    'high': 'High',
+    'unable to assess': 'Unable to assess',
+    'unable_to_assess': 'Unable to assess',
+}
+
 
 def _is_tagalog(language):
     return str(language or '').lower() in ('tl', 'fil', 'tagalog')
@@ -163,8 +171,13 @@ def recommend_with_openai(base_recommendation, image_data_url, language):
             "If severity or stage cannot be determined reliably from "
             "the image, clearly say that it cannot be reliably assessed. "
             "Keep the recommendations practical and farmer-friendly. "
-            "Return a JSON object containing only: assessment (a short string) "
-            "and immediate_actions (an array of at most three short strings). "
+            "Return a JSON object containing only: assessment (a short string), "
+            "severity (an object with level and reason), and immediate_actions "
+            "(an array of at most three short strings). For severity.level, use "
+            "exactly one of: Low, Moderate, High, or Unable to assess. "
+            "The severity is a preliminary decision-support assessment based on "
+            "the supplied disease label, classifier confidence, and available "
+            "farm context; do not present it as a confirmed measurement. "
             "Do not include any other fields. "
             "Respond in Filipino/Tagalog when language is 'tl'; "
             "otherwise respond in English.\n\n"
@@ -248,14 +261,32 @@ def recommend_with_openai(base_recommendation, image_data_url, language):
             return base_recommendation, False
 
         # Reject malformed output before it reaches React. The provider can
-        # change only the two presentation fields requested above.
+        # change only the validated presentation fields requested above.
         assessment = ai.get('assessment')
+        severity = ai.get('severity')
         actions = ai.get('immediate_actions')
+        severity_level = ''
+        severity_reason = ''
+        if isinstance(severity, dict):
+            severity_level = AI_SEVERITY_LEVELS.get(
+                str(severity.get('level') or '').strip().lower(),
+                '',
+            )
+            raw_reason = severity.get('reason')
+            if isinstance(raw_reason, str):
+                severity_reason = raw_reason.strip()
         if (not isinstance(assessment, str) or not assessment.strip()
+                or not severity_level or not severity_reason
                 or not isinstance(actions, list) or not 1 <= len(actions) <= 3
                 or any(not isinstance(action, str) or not action.strip() for action in actions)):
             return base_recommendation, False
         recommendation = dict(base_recommendation)
+        recommendation['severity'] = dict(base_recommendation['severity'])
+        recommendation['severity'].update({
+            'level': severity_level,
+            'reason': severity_reason,
+            'source': 'openai',
+        })
         recommendation.update({
             'assessment': assessment.strip(),
             'immediate_actions': [action.strip() for action in actions],

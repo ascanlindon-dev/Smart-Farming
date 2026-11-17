@@ -141,18 +141,19 @@ class RecommendationProviderTests(SimpleTestCase):
         return response
 
     def test_generated_text_preserves_verified_fields_and_original_fallback(self):
-        response = self.provider({'assessment': 'Generated assessment.', 'immediate_actions': ['Inspect affected leaves.'], 'chemical_treatment': {'available': True}, 'severity': {'level': 'Severe'}})
+        response = self.provider({'assessment': 'Generated assessment.', 'severity': {'level': 'High', 'reason': 'The disease can spread quickly under humid conditions.'}, 'immediate_actions': ['Inspect affected leaves.'], 'chemical_treatment': {'available': True}})
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}), patch('requests.post', return_value=response):
             data, used_ai = recommend_with_openai(self.base, None, 'en')
         self.assertTrue(used_ai)
         self.assertEqual(data['source'], 'openai')
         self.assertEqual(data['assessment'], 'Generated assessment.')
-        self.assertEqual(data['severity'], self.base['severity'])
+        self.assertEqual(data['severity']['level'], 'High')
+        self.assertEqual(data['severity']['source'], 'openai')
         self.assertFalse(data['chemical_treatment']['available'])
         self.assertEqual(self.base['source'], 'fallback')
 
     def test_invalid_provider_output_keeps_fallback(self):
-        for value in ({}, {'assessment': {}, 'immediate_actions': ['Inspect']}, {'assessment': 'Text', 'immediate_actions': [5]}, []):
+        for value in ({}, {'assessment': {}, 'severity': {'level': 'High', 'reason': 'Reason'}, 'immediate_actions': ['Inspect']}, {'assessment': 'Text', 'severity': {'level': 'Severe', 'reason': 'Reason'}, 'immediate_actions': ['Inspect']}, {'assessment': 'Text', 'severity': {'level': 'High'}, 'immediate_actions': ['Inspect']}, {'assessment': 'Text', 'severity': {'level': 'High', 'reason': 'Reason'}, 'immediate_actions': [5]}, []):
             with self.subTest(value=value), patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}), patch('requests.post', return_value=self.provider(value)):
                 data, used_ai = recommend_with_openai(self.base, None, 'en')
                 self.assertFalse(used_ai)

@@ -1189,6 +1189,9 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
                         )}
                         <div className="grid gap-2 sm:grid-cols-2">
                           <p><span className="font-semibold text-slate-900">AI Preliminary Severity Assessment:</span> {aiRecommendation.severity?.level || (language === 'tl' ? 'Hindi maaasahang matukoy mula sa larawan' : 'Cannot be reliably assessed from this image')}</p>
+                          {aiRecommendation.severity?.reason && (
+                            <p className="sm:col-span-2 text-xs text-slate-500"><span className="font-semibold text-slate-700">{language === 'tl' ? 'Batayan' : 'Reason'}:</span> {aiRecommendation.severity.reason}</p>
+                          )}
                           <p className="sm:col-span-2"><span className="font-semibold text-slate-900">{language === 'tl' ? 'Kondisyon' : 'Condition'}:</span> {aiRecommendation.stage?.label || (language === 'tl' ? 'Hindi maaasahang matukoy mula sa larawan' : 'Cannot be reliably determined from this image')}</p>
                         </div>
                         {[
