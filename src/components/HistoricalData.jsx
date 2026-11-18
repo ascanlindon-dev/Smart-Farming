@@ -227,6 +227,54 @@ function getRainfallPresentation(totalRainfall, rainyDays) {
   };
 }
 
+function buildForecastRainfall(forecast) {
+  const validDays = (Array.isArray(forecast) ? forecast : [])
+    .map((day) => ({
+      ...day,
+      rainfall: Number(day?.rainfall),
+    }))
+    .filter((day) => Number.isFinite(day.rainfall) && day.rainfall >= 0);
+
+  if (!validDays.length) {
+    return { data: [], summary: emptyHistory.rainfallSummary };
+  }
+
+  let cumulative = 0;
+  const data = validDays.map((day) => {
+    cumulative += day.rainfall;
+    return {
+      time: day.day || day.date,
+      rainfall: Number(day.rainfall.toFixed(1)),
+      cumulative: Number(cumulative.toFixed(1)),
+    };
+  });
+  const totalRainfall = Number(cumulative.toFixed(1));
+  const rainyDays = data.filter((day) => day.rainfall > 0).length;
+  const dryDays = data.length - rainyDays;
+  const peakDay = data.reduce((peak, day) => (!peak || day.rainfall > peak.rainfall ? day : peak), null);
+  const lowestDay = data.reduce((lowest, day) => (!lowest || day.rainfall < lowest.rainfall ? day : lowest), null);
+
+  return {
+    data,
+    summary: {
+      ...emptyHistory.rainfallSummary,
+      totalRainfall,
+      rainyDays,
+      dryDays,
+      avgPerDay: Number((totalRainfall / data.length).toFixed(1)),
+      previousPeriodTotal: null,
+      changeFromPrevious: null,
+      peakDay,
+      lowestDay,
+      distribution: {
+        rainyPercent: Math.round((rainyDays / data.length) * 100),
+        dryPercent: Math.round((dryDays / data.length) * 100),
+      },
+      recommendation: 'Rainfall values are based on the weather forecast, not calibrated farm rain-gauge measurements.',
+    },
+  };
+}
+
 function HistoryTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
 
@@ -464,6 +512,10 @@ export default function HistoricalData() {
     rainfallSummary,
   } = history;
 
+  const forecastRainfall = useMemo(() => buildForecastRainfall(weatherForecast), [weatherForecast]);
+  const displayedRainfallData = forecastRainfall.data.length > 0 ? forecastRainfall.data : rainfallData;
+  const displayedRainfallSummary = forecastRainfall.data.length > 0 ? forecastRainfall.summary : rainfallSummary;
+
   const hasAnyData = useMemo(
     () =>
       temperatureData.length > 0 ||
@@ -478,8 +530,8 @@ export default function HistoricalData() {
     [temperatureData, rainfallData, humidityData, diseaseRiskData, leafDetectionData, fruitMaturityData, leafLabelBreakdown, fruitLabelBreakdown, weatherForecast],
   );
   const hasExistingData = lastUpdated !== null || hasAnyData;
-  const heaviestRainfall = rainfallData.some((item) => item.rainfall != null)
-    ? Math.max(...rainfallData.filter((item) => item.rainfall != null).map((item) => item.rainfall))
+  const heaviestRainfall = displayedRainfallData.some((item) => item.rainfall != null)
+    ? Math.max(...displayedRainfallData.filter((item) => item.rainfall != null).map((item) => item.rainfall))
     : null;
 
   const rangeLabel =
@@ -518,7 +570,7 @@ export default function HistoricalData() {
             payload: {
               rangeLabel,
               summary,
-              rainfallSummary,
+              rainfallSummary: displayedRainfallSummary,
               leafSummary,
               fruitSummary,
               language,
@@ -541,15 +593,15 @@ export default function HistoricalData() {
     return () => {
       active = false;
     };
-  }, [hasAnyData, rangeLabel, summary, rainfallSummary, leafSummary, fruitSummary, language]);
+  }, [hasAnyData, rangeLabel, summary, displayedRainfallSummary, leafSummary, fruitSummary, language]);
 
   const riskUi = getRiskPresentation(summary.riskLabel, summary.currentRisk);
   const riskProgress = Math.max(0, Math.min(100, Math.round(summary.currentRisk ?? 0)));
   const humidityUi = getHumidityPresentation(summary.avgHumidity);
-  const rainfallUi = getRainfallPresentation(rainfallSummary.totalRainfall, rainfallSummary.rainyDays);
+  const rainfallUi = getRainfallPresentation(displayedRainfallSummary.totalRainfall, displayedRainfallSummary.rainyDays);
   const rainfallMeaning =
-    rainfallSummary.totalRainfall == null
-      ? 'Rainfall meaning will appear once more sensor history is available.'
+    displayedRainfallSummary.totalRainfall == null
+      ? 'Rainfall meaning will appear once the weather forecast is available.'
       : rainfallUi.label === 'Heavy Rain'
         ? 'Rainfall was heavy this week. Soil may stay too wet and affect plant health.'
         : rainfallUi.label === 'Moderate Rain'
@@ -789,7 +841,7 @@ export default function HistoricalData() {
     const rowCount = Math.max(
       temperatureData.length,
       humidityData.length,
-      rainfallData.length,
+      displayedRainfallData.length,
       diseaseRiskData.length,
     );
     const dailyRows = [];
@@ -797,14 +849,14 @@ export default function HistoricalData() {
       const dateLabel =
         temperatureData[i]?.time ||
         humidityData[i]?.time ||
-        rainfallData[i]?.time ||
+        displayedRainfallData[i]?.time ||
         diseaseRiskData[i]?.time ||
         '';
       dailyRows.push([
         dateLabel,
         temperatureData[i]?.temp ?? 'No data',
         humidityData[i]?.humidity ?? 'No data',
-        rainfallData[i]?.rainfall ?? 'No data',
+        displayedRainfallData[i]?.rainfall ?? 'No data',
         diseaseRiskData[i]?.risk ?? 'No data',
       ]);
     }
@@ -1135,10 +1187,10 @@ export default function HistoricalData() {
                     <Card className="w-full max-w-full overflow-hidden border border-sky-100 bg-gradient-to-r from-sky-50 to-white shadow-sm">
                       <CardContent className="px-6 py-6 sm:px-7 sm:py-7">
                         <div>
-                          <p className="text-sm font-medium text-slate-600">Rainfall This Week</p>
+                            <p className="text-sm font-medium text-slate-600">Rainfall Forecast This Week</p>
                           <div className="mt-2 flex flex-wrap items-center gap-3">
                             <span className="text-2xl font-bold text-slate-950 sm:text-3xl">
-                              {formatValue(rainfallSummary.totalRainfall, ' mm')}
+                              {formatValue(displayedRainfallSummary.totalRainfall, ' mm')}
                             </span>
                             <span className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium ${rainfallUi.badgeClass}`}>
                               {rainfallUi.label}
@@ -1152,40 +1204,40 @@ export default function HistoricalData() {
                       <Card className="border border-sky-100 bg-gradient-to-br from-sky-50 to-white shadow-sm">
                         <CardContent className="px-6 py-5 sm:px-7 sm:py-6">
                           <p className="text-sm font-medium text-slate-600">Total Rainfall</p>
-                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(rainfallSummary.totalRainfall, ' mm')}</p>
+                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(displayedRainfallSummary.totalRainfall, ' mm')}</p>
                         </CardContent>
                       </Card>
                       <Card className="border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white shadow-sm">
                         <CardContent className="px-6 py-5 sm:px-7 sm:py-6">
                           <p className="text-sm font-medium text-slate-600">Rainy Days Count</p>
-                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(rainfallSummary.rainyDays)}</p>
+                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(displayedRainfallSummary.rainyDays)}</p>
                         </CardContent>
                       </Card>
                       <Card className="border border-amber-100 bg-gradient-to-br from-amber-50 to-white shadow-sm">
                         <CardContent className="px-6 py-5 sm:px-7 sm:py-6">
                           <p className="text-sm font-medium text-slate-600">Dry Days Count</p>
-                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(rainfallSummary.dryDays)}</p>
+                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(displayedRainfallSummary.dryDays)}</p>
                         </CardContent>
                       </Card>
                       <Card className="border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white shadow-sm">
                         <CardContent className="px-6 py-5 sm:px-7 sm:py-6">
                           <p className="text-sm font-medium text-slate-600">Average Rainfall per Day</p>
-                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(rainfallSummary.avgPerDay, ' mm')}</p>
+                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(displayedRainfallSummary.avgPerDay, ' mm')}</p>
                         </CardContent>
                       </Card>
                     </div>
 
                     <Card className="w-full max-w-full overflow-hidden border border-sky-100 bg-gradient-to-br from-sky-50 to-white shadow-sm">
                       <CardHeader>
-                        <CardTitle className="text-slate-900">Rainfall in the Past 7 Days</CardTitle>
+                      <CardTitle className="text-slate-900">Rainfall Forecast for the Next 7 Days</CardTitle>
                         <CardDescription className="text-slate-700">
-                          A simple rainfall view with day-by-day meaning.
+                          Forecast rainfall from the weather API, shown day by day. This is not a calibrated rain-gauge reading.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div ref={rainfallChartRef} className="h-[260px] w-full sm:h-[350px]">
                         <ResponsiveContainer key={`rainfall-${chartRenderKey}`} width="100%" height="100%">
-                          <BarChart data={rainfallData}>
+                          <BarChart data={displayedRainfallData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                             <XAxis dataKey="time" stroke="#64748b" style={{ fontSize: '12px' }} />
                             <YAxis yAxisId="left" stroke="#64748b" style={{ fontSize: '12px' }} label={{ value: 'Daily (mm)', angle: -90, position: 'insideLeft' }} />
@@ -1239,20 +1291,20 @@ export default function HistoricalData() {
                           <div className="grid grid-cols-[minmax(0,1fr)_120px] items-start gap-3">
                             <span className="min-w-0">Highest Rainfall</span>
                             <span className="w-[120px] whitespace-normal break-normal text-right font-semibold text-slate-900">
-                              {rainfallSummary.peakDay?.time || 'No data'} ({formatValue(rainfallSummary.peakDay?.rainfall, ' mm')})
+                              {displayedRainfallSummary.peakDay?.time || 'No data'} ({formatValue(displayedRainfallSummary.peakDay?.rainfall, ' mm')})
                             </span>
                           </div>
                           <div className="grid grid-cols-[minmax(0,1fr)_120px] items-start gap-3">
                             <span className="min-w-0">Lowest Rainfall</span>
                             <span className="w-[120px] whitespace-normal break-normal text-right font-semibold text-slate-900">
-                              {rainfallSummary.lowestDay?.time || 'No data'} ({formatValue(rainfallSummary.lowestDay?.rainfall, ' mm')})
+                              {displayedRainfallSummary.lowestDay?.time || 'No data'} ({formatValue(displayedRainfallSummary.lowestDay?.rainfall, ' mm')})
                             </span>
                           </div>
                           <div className="grid grid-cols-[minmax(0,1fr)_120px] items-start gap-3">
                             <span className="min-w-0">Most Consistent Day Range</span>
                             <span className="w-[120px] whitespace-normal break-normal text-right font-semibold text-slate-900">
-                              {rainfallSummary.consistentRange?.start
-                                ? `${rainfallSummary.consistentRange.start}${rainfallSummary.consistentRange.end && rainfallSummary.consistentRange.end !== rainfallSummary.consistentRange.start ? `-${rainfallSummary.consistentRange.end}` : ''}`
+                              {displayedRainfallSummary.consistentRange?.start
+                                ? `${displayedRainfallSummary.consistentRange.start}${displayedRainfallSummary.consistentRange.end && displayedRainfallSummary.consistentRange.end !== displayedRainfallSummary.consistentRange.start ? `-${displayedRainfallSummary.consistentRange.end}` : ''}`
                                 : 'No sustained range'}
                             </span>
                           </div>
@@ -1266,16 +1318,16 @@ export default function HistoricalData() {
                         <CardContent className="space-y-4 text-sm text-slate-700">
                           <div className="flex items-center justify-between">
                             <span>This Period</span>
-                            <span className="font-semibold text-slate-900">{formatValue(rainfallSummary.totalRainfall, ' mm')}</span>
+                            <span className="font-semibold text-slate-900">{formatValue(displayedRainfallSummary.totalRainfall, ' mm')}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span>Previous Period</span>
-                            <span className="font-semibold text-slate-900">{formatValue(rainfallSummary.previousPeriodTotal, ' mm')}</span>
+                            <span className="font-semibold text-slate-900">{formatValue(displayedRainfallSummary.previousPeriodTotal, ' mm')}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span>Change</span>
-                            <span className={`font-semibold ${Number(rainfallSummary.changeFromPrevious || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                              {Number(rainfallSummary.changeFromPrevious || 0) >= 0 ? '+' : ''}{formatValue(rainfallSummary.changeFromPrevious, ' mm')}
+                            <span className={`font-semibold ${Number(displayedRainfallSummary.changeFromPrevious || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {Number(displayedRainfallSummary.changeFromPrevious || 0) >= 0 ? '+' : ''}{formatValue(displayedRainfallSummary.changeFromPrevious, ' mm')}
                             </span>
                           </div>
                         </CardContent>
@@ -1295,22 +1347,22 @@ export default function HistoricalData() {
                             <div className="flex h-full w-full">
                               <div
                                 className="bg-sky-500 transition-all duration-500"
-                                style={{ width: `${rainfallSummary.distribution?.rainyPercent || 0}%` }}
+                                style={{ width: `${displayedRainfallSummary.distribution?.rainyPercent || 0}%` }}
                               />
                               <div
                                 className="bg-amber-300 transition-all duration-500"
-                                style={{ width: `${rainfallSummary.distribution?.dryPercent || 0}%` }}
+                                style={{ width: `${displayedRainfallSummary.distribution?.dryPercent || 0}%` }}
                               />
                             </div>
                           </div>
                           <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                             <div className="rounded-xl bg-sky-50 p-3 text-sky-800">
                               <p className="font-medium">Rainy</p>
-                              <p className="mt-1 text-lg font-semibold">{formatValue(rainfallSummary.distribution?.rainyPercent, '%')}</p>
+                              <p className="mt-1 text-lg font-semibold">{formatValue(displayedRainfallSummary.distribution?.rainyPercent, '%')}</p>
                             </div>
                             <div className="rounded-xl bg-amber-50 p-3 text-amber-800">
                               <p className="font-medium">Dry</p>
-                              <p className="mt-1 text-lg font-semibold">{formatValue(rainfallSummary.distribution?.dryPercent, '%')}</p>
+                              <p className="mt-1 text-lg font-semibold">{formatValue(displayedRainfallSummary.distribution?.dryPercent, '%')}</p>
                             </div>
                           </div>
                         </CardContent>
