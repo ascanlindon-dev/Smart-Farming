@@ -951,47 +951,7 @@ export default function HistoricalData() {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4">
-            <Card className="border-none bg-white/90 shadow-lg backdrop-blur-sm">
-              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <CardTitle className="text-base text-slate-900">Whole-System Summary</CardTitle>
-                  <CardDescription className="text-sm text-slate-600">
-                    Combined snapshot of environmental monitoring, disease scans, and maturity checks for the current range.
-                  </CardDescription>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadSummary}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-100 sm:w-auto"
-                >
-                  <Download className="h-4 w-4" />
-                  Download Whole-System Summary
-                </button>
-              </CardHeader>
-              <CardContent className="space-y-5 px-6 pb-6 pt-2 sm:px-8 sm:pb-8">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-                  {wholeSystemSummary.map((item) => (
-                    <div key={item.label} className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 py-4 pr-5 shadow-sm sm:py-5 sm:pr-6" style={{ paddingLeft: '32px' }}>
-                      <p className="break-words text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{item.label}</p>
-                      <p className="mt-2 break-words text-lg font-semibold text-slate-900">{item.value}</p>
-                      <p className="mt-2 break-words text-sm leading-7 text-slate-600">{item.note}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-cyan-50">
-                  <div className="box-border flex w-full min-w-0 flex-col items-start pb-5 pr-5 pt-6 text-left sm:pr-6" style={{ paddingLeft: '32px' }}>
-                    <p className="w-full min-w-0 break-words text-left text-base font-semibold text-emerald-900">System Narrative</p>
-                    <p className="mt-3 w-full min-w-0 break-words text-left text-base leading-8 text-slate-700">
-                      {nlpSummary || 'No whole-system narrative is available yet. Generate more history to build a stronger summary.'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="overflow-hidden border-none bg-white/85 shadow-lg backdrop-blur-sm">
+          <Card className="overflow-hidden border-none bg-white/85 shadow-lg backdrop-blur-sm">
               <CardContent className="w-full max-w-full space-y-4 overflow-x-hidden">
                 <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full space-y-6 overflow-x-hidden">
                   <div
@@ -1616,8 +1576,7 @@ export default function HistoricalData() {
                   </div>
                 </Tabs>
               </CardContent>
-            </Card>
-          </div>
+          </Card>
         </>
       )}
     </div>
