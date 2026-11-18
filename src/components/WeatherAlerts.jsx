@@ -383,7 +383,12 @@ export function WeatherAlerts({ isActive = true }) {
   const lowestRainDay = displayedForecast.reduce((lowest, day) => !lowest || rainfallFor(day) < rainfallFor(lowest) ? day : lowest, null);
   const highestRainDay = displayedForecast.reduce((highest, day) => !highest || rainfallFor(day) > rainfallFor(highest) ? day : highest, null);
   const todayRain = rainfallFor(displayedForecast[0]);
-  const todayRainChance = Number(displayedForecast[0]?.rainChance ?? 0);
+  // Keep the UI's displayed rain chance within the requested 10%–80% range.
+  // The original API value remains unchanged for forecast logic and rainfall data.
+  const rawTodayRainChance = Number(displayedForecast[0]?.rainChance ?? 0);
+  const todayRainChance = Number.isFinite(rawTodayRainChance)
+    ? Math.round(Math.min(80, Math.max(10, rawTodayRainChance)))
+    : 10;
   const forecastRangeLabel = displayedForecast.length
     ? `${getDayLabel(displayedForecast[0]?.date, 0, lang)} hanggang ${getDayLabel(displayedForecast[displayedForecast.length - 1]?.date, displayedForecast.length - 1, lang)}`
     : '';
