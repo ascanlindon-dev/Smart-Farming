@@ -76,6 +76,29 @@ class Prediction(models.Model):
 		return f"{self.prediction_type}:{self.label} ({self.confidence:.3f}) @ {self.created_at}"
 
 
+class HarvestRecord(models.Model):
+	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='harvest_records')
+	prediction = models.ForeignKey(
+		Prediction,
+		null=True,
+		blank=True,
+		on_delete=models.SET_NULL,
+		related_name='harvest_records',
+	)
+	harvest_date = models.DateField()
+	notes = models.CharField(max_length=500, blank=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ['-harvest_date', '-id']
+		indexes = [
+			models.Index(fields=['user', '-harvest_date'], name='harvest_user_date_idx'),
+		]
+
+	def __str__(self):
+		return f"Harvest by {self.user_id} on {self.harvest_date}"
+
+
 class WeatherCache(models.Model):
 	requested_q = models.CharField(max_length=255)
 	normalized_q = models.CharField(max_length=255, db_index=True)

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .harvest_records import harvest_records
 from .prediction_stats import leaf_scan_stats
 from .prediction_transactions import prediction_image, prediction_transactions
 from .sensor_readings import sensor_readings
@@ -19,6 +20,7 @@ urlpatterns = [
     path('predictions/transactions/', prediction_transactions),
     path('predictions/<int:prediction_id>/image/', prediction_image),
     path('predictions/leaf-stats/', leaf_scan_stats),
+    path('maturity/harvest-records/', harvest_records),
     path('nlp/summary/', views.nlp_summary),
     path('disease-recommendation/', views.disease_recommendation),
     path('telemetry/', views.telemetry),

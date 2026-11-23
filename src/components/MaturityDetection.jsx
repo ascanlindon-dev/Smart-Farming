@@ -3,6 +3,7 @@ import { useState, useRef, useContext, useEffect } from 'react';
 import { FARM_HARVEST_REFERENCE, maturityAdvice, maturityReadiness } from '../lib/maturityAdvice.mjs';
 import ScanSaveStatus from './ScanSaveStatus';
 import PredictionTransactions from './PredictionTransactions';
+import HarvestRecords from './HarvestRecords';
 import { LanguageContext } from '../LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -31,8 +32,6 @@ export default function MaturityDetection({ onAnalysisComplete }) {
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [nlpSummary, setNlpSummary] = useState('');
-  const [nlpSource, setNlpSource] = useState('fallback');
   const [historyRevision, setHistoryRevision] = useState(0);
 
   useEffect(() => () => stream?.getTracks().forEach((track) => track.stop()), [stream]);
@@ -77,7 +76,47 @@ export default function MaturityDetection({ onAnalysisComplete }) {
       captureUploadTitle: 'Kuhanan o I-upload ang Larawan ng Rambutan', captureUploadDesc: 'Kuhanan o mag-upload ng malinaw na larawan ng rambutan', capturePrompt: 'Kuhanan ng larawan o mag-upload ng image', supported: 'Tumatanggap ng JPG, PNG, at WebP', takePhoto: 'Kuhanan ng Larawan', uploadImage: 'Mag-upload ng Larawan', analyzeMaturity: 'Suriin ang Pagkahinog', clear: 'I-clear', analyzingMaturity: 'Sinusuri ang pagkahinog...', step: 'Hakbang 1/3', analyzingDesc: 'Sinusuri ng AI ang kulay, laki, at mga palatandaan ng pagkahinog', analysisTitle: 'Pagsusuri ng Pagkahinog', analysisDesc: 'Pagsusuri ng AI at mga payo sa pag-ani', noResults: 'Wala pang resulta', uploadToResults: 'Mag-upload at magsuri ng larawan ng rambutan para makita ang resulta', confident: 'kumpiyansa', confidenceNA: 'Kumpiyansa: Wala', daysHarvest: 'Araw Bago Anihin', confidenceLevel: 'Antas ng Kumpiyansa', observed: 'Mga Nakikitang Katangian:', nlpTitle: 'Rekomendasyon', noRecommendation: 'Wala pang natural-language na rekomendasyon.',       harvesting: 'Mga Rekomendasyon sa Pag-ani', harvestingDesc: 'Mga tamang paraan para sa oras at paghawak ng ani', harvestReadiness: 'Kahandaan sa pag-ani', harvestReference: 'Sanggunian sa panahon ng ani', harvestReadinessDesc: 'Gamitin ang panahon ng ani bilang gabay; isang larawang prutas lamang ang sinusuri sa bawat assessment.', harvestSeason: 'Inaasahang panahon ng ani', floweringPeriod: 'Panahon ng pamumulaklak', reportedCycle: 'Iniulat na cycle ng pag-aani', cycleValue: `Humigit-kumulang ${FARM_HARVEST_REFERENCE.reportedCycleMonths} buwan`, cycleCaution: 'Hindi ginagamit ang 8-buwang cycle sa pagkalkula ng petsa hangga’t hindi napapatunayan ang kaugnayan nito sa taunang panahon ng ani.', ripeHarvestGuidance: 'Maaaring hinog ang isang bunga batay sa larawang ito. Suriin muna ang aktuwal na kondisyon at anihin lamang kung angkop; hindi ibig sabihin nito na handa nang anihin ang buong bukid.', unripeHarvestGuidance: 'Patuloy na bantayan ang bungang ito habang nasa puno. Hindi nangangahulugang handa nang anihin ang bunga dahil panahon na ng anihan.', noHarvestAssessment: 'Wala pang kumpirmadong pagsusuri ng bunga. Hindi matutukoy sa iisang larawan kung handa nang anihin ang buong bukid.', critical: 'Mahalaga ang Tamang Oras ng Pag-ani', criticalDesc: 'Hindi gaanong nahihinog ang rambutan pagkatapos anihin. Pitasin lamang ang sapat na hinog sa puno.', guidelines: 'Mga Gabay sa Pag-ani:', storage: 'Pag-iimbak at Paghawak:', tipsTitle: 'Mga Tip para sa Mas Magandang Resulta', naturalLight: 'Natural na Ilaw', naturalLightDesc: 'Kuhanan sa liwanag ng araw para makita nang tama ang kulay', multipleAngles: 'Iba’t Ibang Anggulo', multipleAnglesDesc: 'Kuhanan ang iba’t ibang bunga para masuri ang kabuuang ani', dailyMonitoring: 'Araw-araw na Pagsusuri', dailyMonitoringDesc: 'Suriin ang pagkahinog araw-araw sa panahon ng anihan', captureTitle: 'Kuhanan ng Larawan ng Rambutan', captureDesc: 'Iposisyon nang malinaw ang rambutan at pindutin ang capture', retry: 'Subukan Gamit ang Ibang Larawan', ai: 'AI', fallback: 'Fallback', na: 'Wala', resultLabels: { unripe: 'Hindi Pa Hinog - Masyado Pang Maaga', 'nearly-ripe': 'Malapit Nang Hinog - Halos Handa Na', ready: 'Hinog - Handa Nang Anihin', overripe: 'Sobrang Hinog - Agarang Anihin' }, resultDescriptions: { unripe: 'Hindi pa handang anihin ang rambutan.', 'nearly-ripe': 'Malapit nang mahinog ang rambutan. Anihin sa loob ng 3-5 araw.', ready: 'Tamang pagkahinog. Anihin ngayon para sa pinakamahusay na kalidad.', overripe: 'Lampas na sa pinakamainam na pagkahinog ang bunga. Anihin agad.' },
     },
   };
-  const t = translations[language];
+  const maturityFlowText = {
+    en: {
+      title: 'CNN Fruit Maturity Assessment',
+      analysisDesc: 'Existing CNN classification and guidance for the photographed fruit.',
+      confidenceNA: 'Confidence unavailable',
+      usualHarvestPeriod: 'Usual harvest period reported for this farm',
+      usualHarvestNote: 'Season is context only. It does not determine the CNN result or mean the whole farm is ready.',
+      seasonIsContext: 'Context only',
+      assessmentImageAlt: 'Fruit image used for this maturity assessment',
+      recommendationSource: 'Guidance based on the CNN classification',
+      recommendationDisclaimer: 'General monitoring guidance only. A ripe result applies to this photographed fruit, not the whole tree or farm.',
+      resultLabels: {
+        immature: 'Unripe',
+        mature: 'Ripe',
+      },
+      resultDescriptions: {
+        immature: 'The existing CNN classified the photographed fruit as unripe. Continue monitoring it on the tree.',
+        mature: 'The existing CNN classified the photographed fruit as ripe. Inspect this fruit before harvesting; this does not mean the whole farm is ready.',
+      },
+    },
+    tl: {
+      title: 'Pagsusuri ng Pagkahinog Gamit ang CNN',
+      analysisDesc: 'Resulta ng kasalukuyang CNN at gabay para sa bungang nasa larawan.',
+      confidenceNA: 'Hindi available ang kumpiyansa',
+      usualHarvestPeriod: 'Karaniwang panahon ng anihan na iniulat para sa bukid',
+      usualHarvestNote: 'Sanggunian lamang ang panahon. Hindi nito binabago ang resulta ng CNN o nangangahulugang handa nang anihin ang buong bukid.',
+      seasonIsContext: 'Sanggunian lamang',
+      assessmentImageAlt: 'Larawan ng bungang sinuri para sa pagkahinog',
+      recommendationSource: 'Gabay batay sa resulta ng CNN',
+      recommendationDisclaimer: 'Pangkalahatang gabay lamang ito. Para lamang sa bungang nasa larawan ang resultang hinog, hindi sa buong puno o bukid.',
+      resultLabels: {
+        immature: 'Hindi Pa Hinog',
+        mature: 'Hinog',
+      },
+      resultDescriptions: {
+        immature: 'Inuri ng kasalukuyang CNN na hindi pa hinog ang bungang nasa larawan. Patuloy itong subaybayan habang nasa puno.',
+        mature: 'Inuri ng kasalukuyang CNN na hinog ang bungang nasa larawan. Suriin muna ang bungang ito bago anihin; hindi ito nangangahulugang handa na ang buong bukid.',
+      },
+    },
+  };
+  const t = { ...translations[language], ...maturityFlowText[language] };
   const localizedResult = result && language === 'tl'
     ? { ...result, stage: t.resultLabels[result.readiness] || result.stage, description: t.resultDescriptions[result.readiness] || result.description }
     : result;
@@ -89,48 +128,6 @@ export default function MaturityDetection({ onAnalysisComplete }) {
 
   const advice = result && !result.canRetry ? maturityAdvice(result.readiness, language) : null;
   const displayResult = advice ? { ...result, ...advice } : result;
-
-  useEffect(() => {
-    let active = true;
-    const controller = new AbortController();
-    setNlpSummary('');
-    setNlpSource('fallback');
-    if (!result || result.canRetry) {
-      setNlpSummary('');
-      setNlpSource('fallback');
-      return () => { active = false; };
-    }
-
-    async function loadSummary() {
-      try {
-        const response = await apiFetch('/api/nlp/summary/', {
-          method: 'POST',
-          signal: controller.signal,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            kind: 'fruit_maturity',
-            payload: {
-              stage: result.readiness,
-              confidence: result.confidence,
-              language,
-            },
-          }),
-        });
-        if (!response.ok) throw new Error('Could not load recommendation');
-        const data = await response.json();
-        if (!active) return;
-        setNlpSummary(data.summary || '');
-        setNlpSource(data.source || 'fallback');
-      } catch {
-        if (!active) return;
-        setNlpSummary('');
-        setNlpSource('fallback');
-      }
-    }
-
-    loadSummary();
-    return () => { active = false; controller.abort(); };
-  }, [result, language]);
 
   const handleFileSelect = (event) => {
     const file = event.target.files?.[0];
@@ -343,7 +340,19 @@ export default function MaturityDetection({ onAnalysisComplete }) {
         if (!readiness || data.rambutan_verified !== true) {
           throw new Error(language === 'tl' ? 'Hindi matiyak na rambutan ito. Kunan ulit nang mas malapit.' : 'Rambutan could not be confirmed. Take a closer photo.');
         }
-        const out = { ...maturityAdvice(readiness, language), confidence: (data.confidence * 100).toFixed(1), storage: data.storage };
+        const confidence = Number(data.confidence);
+        const confidencePercent = Number.isFinite(confidence) && confidence >= 0 && confidence <= 1
+          ? (confidence * 100).toFixed(1)
+          : null;
+        const out = {
+          ...maturityAdvice(readiness, language),
+          confidence: confidencePercent,
+          predictionId: data.storage?.saved && Number.isInteger(data.storage.prediction_id)
+            ? data.storage.prediction_id
+            : null,
+          imageUrl: data.image_url || null,
+          storage: data.storage,
+        };
 
         setResult(out);
         setHistoryRevision((value) => value + 1);
@@ -511,6 +520,13 @@ export default function MaturityDetection({ onAnalysisComplete }) {
             ) : (
               <div className="space-y-4">
                 <ScanSaveStatus storage={result?.storage} language={language} />
+                {(selectedImage || result.imageUrl) && (
+                  <img
+                    src={selectedImage || result.imageUrl}
+                    alt={t.assessmentImageAlt}
+                    className="max-h-64 w-full rounded-xl border border-slate-200 bg-slate-50 object-contain"
+                  />
+                )}
                 {/* Maturity Result */}
                 <div className={`p-4 rounded-lg border-2 ${localizedResult.readiness === 'not_rambutan' ? 'border-red-300 bg-red-50' : getReadinessColor(localizedResult.readiness)}`}>
                   <div className="flex items-start gap-3">
@@ -523,7 +539,9 @@ export default function MaturityDetection({ onAnalysisComplete }) {
                       <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <h3 className="text-lg">{displayResult.stage}</h3>
                         {!result.canRetry && <Badge variant="secondary" className="bg-white/80">
-                          {result.confidence != null ? `${result.confidence}% confident` : 'Confidence: N/A'}
+                          {result.confidence != null
+                            ? `${result.confidence}% ${t.confident}`
+                            : t.confidenceNA}
                         </Badge>}
                       </div>
                       <p className="text-base leading-7 opacity-90">{displayResult.description || result.message}</p>
@@ -543,30 +561,16 @@ export default function MaturityDetection({ onAnalysisComplete }) {
                   )}
                 </div>
 
-                {/* Key Metrics - hidden for not_rambutan */}
-{!result.canRetry && displayResult.daysToHarvest && (
-  <div className="grid grid-cols-2 gap-3">
-    <div className="p-3 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200">
-      <div className="flex items-center gap-2 mb-1">
-        <Clock className="w-4 h-4 text-blue-600" />
-        <p className="text-sm text-blue-900">{t.daysHarvest}</p>
-      </div>
-
-      <p className="text-base text-blue-900">
-        {result.daysToHarvest}
-      </p>
-    </div>
-  </div>
-)}
-
                 {/* Confidence Score - hidden for not_rambutan */}
                 {!result.canRetry && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-base">
                     <span className="text-gray-600">{t.confidenceLevel}</span>
-                    <span className="text-gray-900">{result.confidence != null ? `${result.confidence}%` : t.na}</span>
+                    <span className="text-gray-900">{result.confidence != null ? `${result.confidence}%` : t.confidenceNA}</span>
                   </div>
-                  <Progress value={Number(result.confidence) || 0} className="h-2" />
+                  {result.confidence != null && (
+                    <Progress value={Number(result.confidence)} className="h-2" />
+                  )}
                 </div>
                 )}
 
@@ -587,14 +591,10 @@ export default function MaturityDetection({ onAnalysisComplete }) {
 
                 {!result.canRetry && <div className="rounded-lg border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm text-emerald-900">{t.nlpTitle}</h4>
-                    <Badge variant="secondary" className="bg-white/90">
-                      {nlpSource === 'ai' ? t.ai : t.fallback}
-                    </Badge>
+                    <h4 className="text-sm font-semibold text-emerald-900">{t.recommendationSource}</h4>
                   </div>
-                  <p className="text-sm text-orange-900">
-                    {nlpSummary || displayResult.harvestingTips?.[0] || t.noRecommendation}
-                  </p>
+                  <p className="text-sm leading-6 text-emerald-950">{displayResult.action}</p>
+                  <p className="mt-2 text-xs leading-5 text-emerald-900">{t.recommendationDisclaimer}</p>
                 </div>}
               </div>
             )}
@@ -602,7 +602,27 @@ export default function MaturityDetection({ onAnalysisComplete }) {
         </Card>
       </div>
 
-      <PredictionTransactions key={historyRevision} predictionType="rambutan" />
+      <Card className="border border-amber-100 bg-gradient-to-r from-amber-50 to-white shadow-sm">
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
+          <div>
+            <CardTitle className="text-sm text-slate-900">{t.harvestReference}</CardTitle>
+            <p className="mt-1 text-sm font-semibold text-amber-900">
+              {t.usualHarvestPeriod}: {FARM_HARVEST_REFERENCE.harvestSeason}
+            </p>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{t.usualHarvestNote}</p>
+          </div>
+          <Badge variant="secondary" className="w-fit shrink-0 bg-white text-amber-900">
+            {t.seasonIsContext}
+          </Badge>
+        </CardContent>
+      </Card>
+
+      <PredictionTransactions
+        key={historyRevision}
+        predictionType="rambutan"
+        viewMode="timeline"
+      />
+      <HarvestRecords predictionId={result && !result.canRetry ? result.predictionId : null} />
 
       {/* Harvesting Recommendations - hidden for notRambutan */}
       {result && !result.canRetry && displayResult.harvestingTips && displayResult.harvestingTips.length > 0 && (

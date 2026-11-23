@@ -43,6 +43,8 @@ const translations = {
     maturityEmpty: 'No maturity assessment scans saved yet.',
     noImage: 'No image name',
     localTime: 'Dates and times use your local timezone.',
+    manilaTime: 'Assessment dates and times use Asia/Manila.',
+    timelineNote: 'Each item is one photo assessment. Separate photos are not assumed to show the same fruit.',
     expand: 'View latest 50',
     minimize: 'Minimize to 10',
     showing: (shown, total) => `Showing ${shown} of ${total} recent transactions`,
@@ -81,6 +83,8 @@ const translations = {
     maturityEmpty: 'Wala pang naka-save na scan ng pagtatasa ng pagkahinog.',
     noImage: 'Walang pangalan ng larawan',
     localTime: 'Ang petsa at oras ay ayon sa iyong lokal na timezone.',
+    manilaTime: 'Ang petsa at oras ng assessment ay ayon sa Asia/Manila.',
+    timelineNote: 'Bawat item ay isang pagsusuri ng larawan. Hindi ipinapalagay na iisang bunga ang nasa magkakahiwalay na larawan.',
     expand: 'Tingnan ang huling 50',
     minimize: 'Ipakita lang ang 10',
     showing: (shown, total) => `Ipinapakita ang ${shown} sa ${total} pinakabagong transaksyon`,
@@ -109,7 +113,12 @@ function MaturityHistoryPhoto({ src, alt, unavailableLabel }) {
   );
 }
 
-export default function PredictionTransactions({ predictionType = '', onCountsChange, refreshKey = 0 }) {
+export default function PredictionTransactions({
+  predictionType = '',
+  onCountsChange,
+  refreshKey = 0,
+  viewMode = 'table',
+}) {
   const { language } = useContext(LanguageContext);
   const t = translations[language] || translations.en;
   const title = predictionType === 'leaf' ? t.leafTitle : predictionType === 'rambutan' ? t.maturityTitle : t.title;
@@ -180,6 +189,7 @@ export default function PredictionTransactions({ predictionType = '', onCountsCh
   const dateFormatter = new Intl.DateTimeFormat(language === 'tl' ? 'fil-PH' : 'en-PH', {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short',
+    ...(predictionType === 'rambutan' ? { timeZone: 'Asia/Manila' } : {}),
   });
   const recentRecords = (data?.results || []).slice(0, 50);
   const visibleRecords = expanded ? recentRecords : recentRecords.slice(0, 10);
@@ -220,74 +230,119 @@ export default function PredictionTransactions({ predictionType = '', onCountsCh
         ) : data && (
           <>
             {error && <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{t.stale}</p>}
-            <Table aria-label={title}>
-              <TableHeader>
-                <TableRow className="bg-slate-50">
-                  {predictionType === 'rambutan' ? (
-                    <>
-                      <TableHead scope="col">{t.photo}</TableHead>
-                      <TableHead scope="col">{t.label}</TableHead>
-                      <TableHead scope="col">{t.confidence}</TableHead>
-                      <TableHead scope="col">{t.createdAt}</TableHead>
-                    </>
-                  ) : (
-                    <>
-                      <TableHead scope="col">{t.predictionType}</TableHead>
-                      <TableHead scope="col">{t.label}</TableHead>
-                      <TableHead scope="col">{t.imageName}</TableHead>
-                      <TableHead scope="col">{t.createdAt}</TableHead>
-                    </>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleRecords.length ? visibleRecords.map((record) => (
-                  <TableRow key={record.id}>
+            {viewMode === 'timeline' && predictionType === 'rambutan' ? (
+              <div>
+                <p className="mb-4 text-sm leading-6 text-slate-600">{t.timelineNote}</p>
+                {visibleRecords.length ? (
+                  <ol className="ml-2 space-y-3 border-l-2 border-emerald-100">
+                    {visibleRecords.map((record) => {
+                      const readiness = maturityReadiness(record.label);
+                      const label = readiness === 'mature' ? t.ripe : readiness === 'immature' ? t.unripe : record.label;
+                      return (
+                        <li key={record.id} className="relative pl-5">
+                          <span className="absolute -left-[0.42rem] top-4 h-3 w-3 rounded-full border-2 border-white bg-emerald-600 ring-2 ring-emerald-100" aria-hidden="true" />
+                          <article className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center">
+                            <MaturityHistoryPhoto
+                              src={record.image_url}
+                              alt={`${t.photo} ${record.id}`}
+                              unavailableLabel={t.unavailablePhoto}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${readiness === 'mature' ? 'bg-emerald-50 text-emerald-800' : readiness === 'immature' ? 'bg-sky-50 text-sky-800' : 'bg-slate-100 text-slate-700'}`}>
+                                  {label}
+                                </span>
+                                {record.confidence !== null && record.confidence !== undefined
+                                  && Number.isFinite(Number(record.confidence)) && (
+                                  <span className="text-xs text-slate-600">
+                                    {t.confidence}: {(Number(record.confidence) * 100).toFixed(1)}%
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-1 text-xs text-slate-500">{t.photo} #{record.id}</p>
+                              <time className="mt-1 block text-sm text-slate-700" dateTime={record.created_at}>
+                                {dateFormatter.format(new Date(record.created_at))}
+                              </time>
+                            </div>
+                          </article>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : (
+                  <p className="whitespace-normal py-8 text-center text-slate-500">{emptyMessage}</p>
+                )}
+              </div>
+            ) : (
+              <Table aria-label={title}>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
                     {predictionType === 'rambutan' ? (
                       <>
-                        <TableCell>
-                          <MaturityHistoryPhoto
-                            src={record.image_url}
-                            alt={`${t.photo} ${record.id}`}
-                            unavailableLabel={t.unavailablePhoto}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium text-slate-900">
-                          {maturityReadiness(record.label) === 'mature'
-                            ? t.ripe
-                            : maturityReadiness(record.label) === 'immature'
-                              ? t.unripe
-                              : record.label}
-                        </TableCell>
-                        <TableCell className="text-slate-600">
-                          {record.confidence !== null && record.confidence !== undefined
-                            && Number.isFinite(Number(record.confidence))
-                            ? `${(Number(record.confidence) * 100).toFixed(1)}%`
-                            : '—'}
-                        </TableCell>
+                        <TableHead scope="col">{t.photo}</TableHead>
+                        <TableHead scope="col">{t.label}</TableHead>
+                        <TableHead scope="col">{t.confidence}</TableHead>
+                        <TableHead scope="col">{t.createdAt}</TableHead>
                       </>
                     ) : (
                       <>
-                        <TableCell>
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${record.prediction_type === 'leaf' ? 'bg-emerald-50 text-emerald-800' : 'bg-orange-50 text-orange-800'}`}>
-                            {record.prediction_type}
-                          </span>
-                        </TableCell>
-                        <TableCell className="max-w-xs whitespace-normal break-words font-medium text-slate-900">{record.label}</TableCell>
-                        <TableCell className="max-w-xs whitespace-normal break-all text-slate-600">{record.image_name || t.noImage}</TableCell>
+                        <TableHead scope="col">{t.predictionType}</TableHead>
+                        <TableHead scope="col">{t.label}</TableHead>
+                        <TableHead scope="col">{t.imageName}</TableHead>
+                        <TableHead scope="col">{t.createdAt}</TableHead>
                       </>
                     )}
-                    <TableCell className="text-slate-600">
-                      <time dateTime={record.created_at}>{dateFormatter.format(new Date(record.created_at))}</time>
-                    </TableCell>
                   </TableRow>
-                )) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="whitespace-normal py-8 text-center text-slate-500">{emptyMessage}</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {visibleRecords.length ? visibleRecords.map((record) => (
+                    <TableRow key={record.id}>
+                      {predictionType === 'rambutan' ? (
+                        <>
+                          <TableCell>
+                            <MaturityHistoryPhoto
+                              src={record.image_url}
+                              alt={`${t.photo} ${record.id}`}
+                              unavailableLabel={t.unavailablePhoto}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium text-slate-900">
+                            {maturityReadiness(record.label) === 'mature'
+                              ? t.ripe
+                              : maturityReadiness(record.label) === 'immature'
+                                ? t.unripe
+                                : record.label}
+                          </TableCell>
+                          <TableCell className="text-slate-600">
+                            {record.confidence !== null && record.confidence !== undefined
+                              && Number.isFinite(Number(record.confidence))
+                              ? `${(Number(record.confidence) * 100).toFixed(1)}%`
+                              : '—'}
+                          </TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell>
+                            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${record.prediction_type === 'leaf' ? 'bg-emerald-50 text-emerald-800' : 'bg-orange-50 text-orange-800'}`}>
+                              {record.prediction_type}
+                            </span>
+                          </TableCell>
+                          <TableCell className="max-w-xs whitespace-normal break-words font-medium text-slate-900">{record.label}</TableCell>
+                          <TableCell className="max-w-xs whitespace-normal break-all text-slate-600">{record.image_name || t.noImage}</TableCell>
+                        </>
+                      )}
+                      <TableCell className="text-slate-600">
+                        <time dateTime={record.created_at}>{dateFormatter.format(new Date(record.created_at))}</time>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="whitespace-normal py-8 text-center text-slate-500">{emptyMessage}</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
             <dl className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm sm:grid-cols-3 sm:gap-6">
               {(predictionType === 'rambutan'
                 ? [
@@ -311,7 +366,7 @@ export default function PredictionTransactions({ predictionType = '', onCountsCh
             <div className="flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p role="status">{t.showing(visibleRecords.length, recentRecords.length)}</p>
-                <p className="mt-1 text-xs">{t.localTime}</p>
+                <p className="mt-1 text-xs">{predictionType === 'rambutan' ? t.manilaTime : t.localTime}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {expanded && (
