@@ -80,8 +80,6 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
   const [aiRecommendationState, setAiRecommendationState] = useState('idle');
   const [typedRecommendation, setTypedRecommendation] = useState('');
   const [aiRecommendationRevealStep, setAiRecommendationRevealStep] = useState(0);
-  const [typedAiRecommendationHeader, setTypedAiRecommendationHeader] = useState('');
-  const [typedAiRecommendationSubtitle, setTypedAiRecommendationSubtitle] = useState('');
   const [typedDiagnosisLine, setTypedDiagnosisLine] = useState('');
   const [typedRiskLine, setTypedRiskLine] = useState('');
   const [typedActionLine, setTypedActionLine] = useState('');
@@ -774,8 +772,6 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
       setAiRecommendationState('idle');
       setTypedRecommendation('');
       setAiRecommendationRevealStep(0);
-      setTypedAiRecommendationHeader('');
-      setTypedAiRecommendationSubtitle('');
       setTypedDiagnosisLine('');
       setTypedRiskLine('');
       setTypedActionLine('');
@@ -791,8 +787,6 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
   recommendation?.text ||
   buildFallbackRecommendation(result) ||
   getAiInsightText(localizedDiagnosisName);
-    const headerText = recommendation.header;
-    const subtitleText = recommendation.subtitle;
     const diagnosisText = `${language === 'tl' ? '🧠 Diagnosis' : '🧠 Diagnosis'}: ${localizedDiagnosisName}`;
     const riskText = `${language === 'tl' ? '🔴 Antas ng Panganib' : '🔴 Risk Level'}: ${getRiskLevelLabel(result.severity)}`;
     const actionText = `${language === 'tl' ? '⚡ Kailangang Aksyon' : '⚡ Action Required'}: ${getActionRequiredLabel(result.severity)}`;
@@ -803,8 +797,6 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
     setAiRecommendationState('done');
     setTypedRecommendation(recommendationText);
     setAiRecommendationRevealStep(6);
-    setTypedAiRecommendationHeader(headerText);
-    setTypedAiRecommendationSubtitle(subtitleText);
     setTypedDiagnosisLine(diagnosisText);
     setTypedRiskLine(riskText);
     setTypedActionLine(actionText);
@@ -823,73 +815,63 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
     : [];
   return (
     <div className="space-y-4 text-base sm:space-y-6 sm:text-lg">
-      {/* Leaf-disease visual header. The analysis flow and API contract remain unchanged. */}
-      <Card className="overflow-hidden border border-emerald-100 bg-gradient-to-br from-white via-emerald-50 to-teal-50 shadow-sm">
-        <CardContent className="p-4 sm:p-5 md:p-7">
-          <div className="flex flex-col gap-3 sm:gap-5 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-white shadow-[0_8px_22px_rgba(22,101,52,.14)] ring-1 ring-emerald-100 sm:h-20 sm:w-20">
-                <LeafScan3DIcon className="h-12 w-12 sm:h-16 sm:w-16" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-xl font-black tracking-tight text-slate-800 sm:text-2xl md:text-3xl">{t.title}</h2>
-                <p className="mt-1 max-w-xl text-xs leading-4 text-slate-500 sm:text-sm sm:leading-6">{t.subtitle}</p>
-              </div>
-            </div>
+      <div className="flex min-w-0 flex-col gap-3 rounded-3xl border border-emerald-950/10 bg-[#14532D] p-4 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
+            <Leaf className="h-6 w-6 text-emerald-200" aria-hidden="true" />
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-6 sm:gap-3 sm:grid-cols-4">
-            {[
-              [t.detectionAccuracy, '94.5%'],
-              [t.diseasesTracked, stats?.diseasesTracked ?? '\u2014', language === 'tl' ? 'Lahat ng na-save mong leaf scan na may sakit, kasama ang paulit-ulit na sakit.' : 'All your saved leaf scans with a disease, including repeated detections.'],
-              [t.scansToday, stats?.scansToday ?? '\u2014', language === 'tl' ? 'Mga na-save mong leaf scan ngayong araw sa iyong local timezone.' : 'Your saved leaf scans today in your local timezone.'],
-              [t.modelVersion, 'v2.1'],
-            ].map(([label, value, description]) => (
-              <div key={label} title={description} className="rounded-2xl border border-white bg-white/80 px-2 py-2 shadow-sm sm:px-4 sm:py-3"><p className="text-xs font-semibold text-slate-400">{label}</p><p className="mt-1 text-lg font-black text-emerald-700 sm:text-xl">{value}</p></div>
-            ))}
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-extrabold tracking-tight sm:text-lg">{t.title}</h2>
+            <p className="text-xs text-emerald-100/90 sm:text-sm">{t.subtitle}</p>
           </div>
-          {statsError && (
-            <p role="status" className="mt-2 text-sm text-amber-800">
-              {language === 'tl' ? 'Hindi makuha ang bilang ng scans. ' : 'Scan counts could not be loaded. '}
-              <button type="button" onClick={refreshStats} className="font-semibold underline">
-                {language === 'tl' ? 'Subukan ulit' : 'Try again'}
-              </button>
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-xl border border-white/15 bg-black/20 px-3 py-1.5 font-semibold text-white">
+            {t.scansToday}: {stats?.scansToday ?? '\u2014'} {language === 'tl' ? 'Dahon' : 'Leaves'}
+          </span>
+          <span className="rounded-xl border border-white/15 bg-black/20 px-3 py-1.5 font-semibold text-emerald-100">
+            {language === 'tl' ? 'Katayuan: Handa' : 'Status: Ready'}
+          </span>
+        </div>
+      </div>
+      {statsError && (
+        <p role="status" className="text-sm text-amber-800">
+          {language === 'tl' ? 'Hindi makuha ang bilang ng scans. ' : 'Scan counts could not be loaded. '}
+          <button type="button" onClick={refreshStats} className="font-semibold underline">{language === 'tl' ? 'Subukan ulit' : 'Try again'}</button>
+        </p>
+      )}
 
-      <section aria-labelledby="disease-reference-frames">
-        <h3 id="disease-reference-frames" className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-slate-500 sm:mb-3">
-          {language === 'tl' ? 'Mga Halimbawang Dahon para sa Disease Detection' : 'Disease Reference Frames'}
-        </h3>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+      <section aria-labelledby="disease-reference-frames" className="space-y-3 pt-2">
+        <div>
+          <h3 id="disease-reference-frames" className="text-lg font-extrabold text-[#1C1917]">
+            {language === 'tl' ? 'Karaniwang Sakit ng Dahon ng Rambutan' : 'Common Rambutan Leaf Problems'}
+          </h3>
+          <p className="mt-1 text-xs text-[#57534E] sm:text-sm">
+            {language === 'tl' ? 'Tingnan ang mga larawan at palatandaan ng karaniwang sakit.' : 'Review the reference photos and visible signs.'}
+          </p>
+        </div>
+        <div className="disease-reference-grid">
           {diseaseReferenceFrames.map((frame) => (
-            <article
-              key={frame.name}
-              className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 text-center shadow-sm sm:p-4"
-            >
-              <div className="h-48 w-full shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-slate-100 sm:h-56 lg:h-52">
-                <img
-                  src={frame.image}
-                  alt={`${frame.name} leaf reference`}
-                  className="h-full w-full object-contain object-center p-3 sm:p-4"
-                />
+            <article key={frame.name} className="disease-reference-card">
+              <div className="disease-reference-image">
+                <img src={frame.image} alt={`${frame.name} leaf reference`} className="h-full w-full object-contain object-center p-3" />
               </div>
-              <span className={`mt-3 inline-flex rounded-full px-4 py-2 text-sm font-bold text-white sm:px-5 sm:py-2.5 sm:text-base ${frame.badgeClass}`}>
-                {frame.name}
-              </span>
-              <p className="mt-2 min-h-8 flex-1 text-sm leading-5 text-slate-500 sm:text-base sm:leading-6">{frame.detail}</p>
+              <span className={`mt-3 self-start rounded-full px-3 py-1.5 text-xs font-bold text-white ${frame.badgeClass}`}>{frame.name}</span>
+              <p className="mt-2 flex-1 text-sm leading-5 text-[#57534E]">{frame.detail}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <div className="scan-layout">
+      <div className="disease-layout items-start">
         {/* Upload Section */}
-        <Card className="border border-slate-100 bg-white shadow-sm">
+        <div className="min-w-0 space-y-5">
+        <Card className="rounded-3xl border border-stone-200 bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="text-sm text-gray-900 sm:text-base">{t.captureOrUpload}</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
+            <CardTitle className="text-base font-extrabold text-[#1C1917] sm:text-lg">
+              {language === 'tl' ? '1. Kunan o Mag-upload ng Dahon' : '1. Take a Photo or Upload Leaf'}
+            </CardTitle>
+            <CardDescription className="text-xs text-[#57534E] sm:text-sm">
               {t.captureOrUploadDesc}
             </CardDescription>
           </CardHeader>
@@ -915,7 +897,8 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
             </p>
 
             {!selectedImage ? (
-              <div className="rounded-3xl border-2 border-dashed border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-white px-4 py-8 text-center transition-colors hover:border-emerald-500 sm:px-6 sm:py-12">
+              <div className="relative min-h-[220px] overflow-hidden rounded-2xl border-2 border-dashed border-emerald-600/40 bg-[#FAF9F5] px-4 py-8 text-center transition-colors hover:border-emerald-600 sm:px-6 sm:py-10">
+                <span className="pointer-events-none absolute left-3 right-3 top-1/2 h-px bg-gradient-to-r from-transparent via-emerald-500/70 to-transparent" />
                 <div className="flex flex-col items-center gap-2 sm:gap-4">
                   <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white shadow-[0_8px_20px_rgba(22,101,52,.14)] sm:h-20 sm:w-20">
                     <LeafScan3DIcon className="h-12 w-12 sm:h-16 sm:w-16" />
@@ -928,7 +911,7 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
                     <Button
                       type="button"
                       onClick={openCamera}
-                      className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                      className="gap-2 bg-[#14532D] hover:bg-[#0F3F22]"
                     >
                       <Camera className="w-4 h-4" />
                       {t.takePhoto}
@@ -1005,18 +988,73 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
                 </p>
               </div>
             )}
+            <div className="border-t border-stone-200 pt-3">
+              <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-[#57534E]">
+                {language === 'tl' ? 'Mga tip para malinaw ang larawan' : 'Tips for a clear photo'}
+              </p>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {[
+                  [language === 'tl' ? 'Maliwanag' : 'Bright light', language === 'tl' ? 'Gamitin ang liwanag ng araw' : 'Use daylight'],
+                  [language === 'tl' ? 'Isang dahon' : 'One leaf', language === 'tl' ? 'Igitna sa kuha' : 'Keep it centered'],
+                  [language === 'tl' ? 'Kita ang batik' : 'Show spots', language === 'tl' ? 'I-focus ang detalye' : 'Focus clearly'],
+                ].map(([title, detail]) => (
+                  <div key={title} className="rounded-2xl border border-stone-200 bg-[#FAF9F5] p-2.5">
+                    <span className="block text-xs font-bold text-[#1C1917]">{title}</span>
+                    <span className="mt-0.5 block text-[11px] leading-4 text-[#57534E]">{detail}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
+          <Card className="rounded-3xl border border-stone-200 bg-white shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-sm font-extrabold text-[#1C1917] sm:text-base">
+                  {language === 'tl' ? 'Pinakahuling Scan' : 'Latest Leaf Check'}
+                </CardTitle>
+                {result?.storage?.saved && (
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-[#14532D]">
+                    {language === 'tl' ? 'Naka-save' : 'Saved'}
+                  </span>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {result ? (
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('disease-analysis-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-[#FAF9F5] p-3 text-left transition hover:border-emerald-700"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-bold text-[#1C1917]">{displayDiseaseName}</span>
+                    <span className="block text-xs text-[#57534E]">{language === 'tl' ? 'Pinakabagong resulta' : 'Latest result'}</span>
+                  </span>
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-700" aria-hidden="true" />
+                </button>
+              ) : (
+                <p className="rounded-2xl border border-dashed border-stone-300 bg-[#FAF9F5] p-3 text-sm text-[#57534E]">
+                  {language === 'tl' ? 'Lalabas dito ang pinakahuling scan pagkatapos mong magsuri ng dahon.' : 'Your latest scan will appear here after you analyze a leaf.'}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Results Section */}
-        <Card className="border border-slate-100 bg-white shadow-sm">
+        <div className="min-w-0">
+        <Card id="disease-analysis-result" className="flex min-w-0 flex-col rounded-3xl border border-stone-200 bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="text-gray-900">{t.analysisResults}</CardTitle>
+            <CardTitle className="text-gray-900">
+              {language === 'tl' ? '2. Resulta at Susunod na Gagawin' : '2. Result & What To Do Next'}
+            </CardTitle>
             <CardDescription>
               {t.aiDiagnosis}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col">
             {scanNotice && (
               <Alert role="alert" className="mb-4 border-amber-300 bg-amber-50">
                 <AlertTriangle className="h-4 w-4" />
@@ -1026,7 +1064,7 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
             )}
             <ScanSaveStatus storage={result?.storage} language={language} />
             {!result ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="flex flex-col items-center justify-center py-8 text-center">
                 <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-violet-50 ring-1 ring-violet-100">
                   <AiPlant3DIcon className="h-16 w-16" />
                 </div>
@@ -1035,15 +1073,13 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-emerald-50 to-white p-5 text-black shadow-lg">
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-black">
-                    {language === 'tl' ? 'Tapos na ang AI Diagnosis' : 'AI Diagnosis Complete'}
-                  </p>
-                  <p className="mt-2 text-sm text-black">
+                <div role="status" className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
+                  <span>
                     {isAnalyzing || aiRecommendationState === 'analyzing'
                       ? (language === 'tl' ? 'Sinusuri ang kalagayan ng halaman...' : 'Analyzing plant condition...')
                       : (language === 'tl' ? 'Handa na ang pagsusuri sa kalagayan ng halaman.' : 'Plant condition analysis is ready.')}
-                  </p>
+                  </span>
                 </div>
 
                 {/* Detection Result */}
@@ -1073,72 +1109,53 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
                   </div>
                 )}
 
-                <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-teal-50 p-5 shadow-sm transition-all duration-500">
+                <div className="rounded-3xl border border-emerald-950/20 bg-gradient-to-br from-emerald-950 via-[#14532D] to-emerald-900 p-4 text-white shadow-lg transition-all duration-500 sm:p-5">
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-sm">
-                        <Sparkles className="h-5 w-5" />
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/35 bg-white/10 text-emerald-200 shadow-sm motion-safe:animate-pulse">
+                        <Sparkles className="h-5 w-5" aria-hidden="true" />
                       </div>
                       <div>
-                        <h4 className="text-base font-semibold text-emerald-950">
+                        <h4 className="font-display text-base font-extrabold text-white sm:text-lg">
                           {recommendation.header}
                         </h4>
-                        <p className="text-sm text-emerald-700">
-                          {language === 'tl' ? 'Mabilis na gabay batay sa analysis' : 'Quick guidance based on the analysis'}
+                        <p className="text-xs text-emerald-100 sm:text-sm">
+                          {recommendation.subtitle}
                         </p>
                       </div>
                     </div>
-
+                    <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
+                      recommendation.isAi
+                        ? 'border-emerald-300/40 bg-emerald-300/15 text-emerald-100'
+                        : 'border-white/20 bg-white/10 text-white/90'
+                    }`}>
+                      {recommendation.isAi
+                        ? (language === 'tl' ? 'AI' : 'AI-generated')
+                        : (language === 'tl' ? 'Gabay' : 'Farm guidance')}
+                    </span>
                   </div>
 
-                  <div className="min-h-[108px] rounded-2xl border border-emerald-100 bg-white/80 px-4 py-4 backdrop-blur-sm">
+                  <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-4 text-[#1C1917] shadow-inner sm:p-5" aria-live="polite">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 pb-3">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#14532D]">
+                        {recommendation.insightLabel}
+                      </span>
+                      <span className="text-[11px] font-semibold text-[#57534E]">
+                        {language === 'tl' ? 'Batay sa resulta ng pagsusuri' : 'Based on this scan result'}
+                      </span>
+                    </div>
+
                     {aiRecommendationState === 'analyzing' && (
-                      <div className="flex items-start gap-3 animate-in fade-in duration-300">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
-                          <Sparkles className="h-5 w-5 animate-pulse" />
-                        </div>
-                        <div className="flex-1 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-4 shadow-sm">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                            {recommendation.header}
-                          </p>
-                          <div className="mt-2 flex items-center gap-1 text-base font-medium text-slate-900">
-                            <span>{language === 'tl' ? 'Inihahanda ang rekomendasyon' : 'Preparing the recommendation'}</span>
-                            <span className="animate-pulse [animation-delay:0ms]">.</span>
-                            <span className="animate-pulse [animation-delay:150ms]">.</span>
-                            <span className="animate-pulse [animation-delay:300ms]">.</span>
-                          </div>
-                        </div>
+                      <div role="status" className="flex items-center gap-2 text-sm text-slate-700">
+                        <Loader2 className="h-4 w-4 animate-spin text-emerald-700" aria-hidden="true" />
+                        <span>{language === 'tl' ? 'Inihahanda ang rekomendasyon...' : 'Preparing the recommendation...'}</span>
                       </div>
                     )}
 
                     {(aiRecommendationState === 'typing' || aiRecommendationState === 'done') && (
                       <div className="animate-in fade-in duration-500">
-                        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-black shadow-sm">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
-                              <Sparkles className="h-5 w-5" />
-                            </div>
-                            <div>
-                              {aiRecommendationRevealStep >= 1 && (
-                                <p className="animate-in fade-in slide-in-from-bottom-1 duration-300 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                                  {typedAiRecommendationHeader}
-                                  {aiRecommendationRevealStep === 1 && typedAiRecommendationHeader.length < recommendation.header.length && (
-                                    <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-emerald-600 align-middle" />
-                                  )}
-                                </p>
-                              )}
-                              {aiRecommendationRevealStep >= 2 && (
-                                <p className="animate-in fade-in slide-in-from-bottom-1 duration-300 text-sm text-slate-600">
-                                  {typedAiRecommendationSubtitle}
-                                  {aiRecommendationRevealStep === 2 && typedAiRecommendationSubtitle.length < recommendation.subtitle.length && (
-                                    <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-emerald-600 align-middle" />
-                                  )}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="mt-4 space-y-2">
+                        <div className="text-black">
+                          <div className="space-y-2 rounded-xl bg-[#FAF9F5] px-3 py-3">
                             {aiRecommendationRevealStep >= 3 && (
                               <p className="animate-in fade-in slide-in-from-bottom-1 duration-300 text-sm font-semibold text-black">
                                 {typedDiagnosisLine}
@@ -1166,7 +1183,7 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
                           </div>
 
                           {aiRecommendationRevealStep >= 6 && (
-                            <div className="animate-in fade-in slide-in-from-bottom-1 duration-300 mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                            <div className="animate-in fade-in slide-in-from-bottom-1 duration-300 mt-3 rounded-xl border border-emerald-100 bg-white px-3 py-3">
                               <p className="text-sm font-semibold text-black">
                                 {recommendation.insightLabel}
                               </p>
@@ -1183,32 +1200,35 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
                     )}
 
                     {aiRecommendation && aiRecommendationState === 'done' && (
-                      <div className="mt-4 space-y-3 border-t border-emerald-100 pt-4 text-sm text-slate-700">
+                      <div className="space-y-3 border-t border-stone-200 pt-4 text-sm text-slate-700">
                         {aiRecommendation.notice && (
                           <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">{aiRecommendation.notice}</p>
                         )}
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <p><span className="font-semibold text-slate-900">AI Preliminary Severity Assessment:</span> {aiRecommendation.severity?.level || (language === 'tl' ? 'Hindi maaasahang matukoy mula sa larawan' : 'Cannot be reliably assessed from this image')}</p>
+                        <div className="grid gap-2 rounded-2xl border border-stone-200 bg-[#FAF9F5] p-3 sm:grid-cols-2">
+                          <p><span className="font-semibold text-slate-900">{language === 'tl' ? 'Pagtataya ng tindi:' : 'Preliminary severity:'}</span> {aiRecommendation.severity?.level || (language === 'tl' ? 'Hindi maaasahang matukoy mula sa larawan' : 'Cannot be reliably assessed from this image')}</p>
                           {aiRecommendation.severity?.reason && (
                             <p className="sm:col-span-2 text-xs text-slate-500"><span className="font-semibold text-slate-700">{language === 'tl' ? 'Batayan' : 'Reason'}:</span> {aiRecommendation.severity.reason}</p>
                           )}
                           <p className="sm:col-span-2"><span className="font-semibold text-slate-900">{language === 'tl' ? 'Kondisyon' : 'Condition'}:</span> {aiRecommendation.stage?.label || (language === 'tl' ? 'Hindi maaasahang matukoy mula sa larawan' : 'Cannot be reliably determined from this image')}</p>
                         </div>
-                        {[
-                          [language === 'tl' ? 'Gawin Ngayon' : 'Do Now', aiRecommendation.immediate_actions],
-                          [language === 'tl' ? 'Pag-iwas' : 'Prevention', aiRecommendation.prevention],
-                          [language === 'tl' ? 'Babantayan' : 'Monitor', aiRecommendation.monitoring],
-                          [language === 'tl' ? 'Environmental Advice' : 'Environmental Advice', aiRecommendation.environmental_advice],
-                        ].map(([title, items]) => Array.isArray(items) && items.length > 0 && (
-                          <div key={title}>
-                            <p className="font-semibold text-slate-900">{title}</p>
-                            <ul className="mt-1 space-y-1">{items.slice(0, 3).map((item) => <li key={item} className="flex gap-2"><span className="text-emerald-600">•</span><span>{item}</span></li>)}</ul>
-                          </div>
-                        ))}
-                        <div>
-                          <p className="font-semibold text-slate-900">Treatment</p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {[
+                            [language === 'tl' ? 'Gawin Ngayon' : 'Do Now', aiRecommendation.immediate_actions],
+                            [language === 'tl' ? 'Pag-iwas sa Pagkalat' : 'Prevent Spread', aiRecommendation.prevention],
+                            [language === 'tl' ? 'Babantayan' : 'Monitor', aiRecommendation.monitoring],
+                            [language === 'tl' ? 'Payo sa Kapaligiran' : 'Environmental Advice', aiRecommendation.environmental_advice],
+                          ].map(([title, items]) => Array.isArray(items) && items.length > 0 && (
+                            <div key={title} className="rounded-2xl border border-stone-200 bg-[#FAF9F5] p-3">
+                              <p className="font-display text-sm font-extrabold text-[#1C1917]">{title}</p>
+                              <ul className="mt-2 space-y-1.5 text-sm text-slate-700">{items.slice(0, 3).map((item) => <li key={item} className="flex gap-2"><span className="text-emerald-700">•</span><span>{item}</span></li>)}</ul>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="rounded-2xl border border-stone-200 bg-[#FAF9F5] p-3">
+                            <p className="font-display text-sm font-extrabold text-[#1C1917]">{language === 'tl' ? 'Mga detalye ng paggamot' : 'Treatment details'}</p>
                           {Array.isArray(aiRecommendation.treatment?.details) && aiRecommendation.treatment.details.length > 0 ? (
-                            <ul className="mt-1 space-y-1">
+                            <ul className="mt-2 space-y-1.5 text-sm text-slate-700">
                               {aiRecommendation.treatment.details.slice(0, 3).map((item) => (
                                 <li key={item} className="flex gap-2"><span className="text-emerald-600">•</span><span>{item}</span></li>
                               ))}
@@ -1219,9 +1239,20 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
                           {aiRecommendation.chemical_treatment?.message && (
                             <p className="mt-1 text-xs text-slate-500">{aiRecommendation.chemical_treatment.message}</p>
                           )}
+                          </div>
+                          {aiRecommendation.when_to_seek_help && (
+                            <div className="rounded-2xl border border-stone-200 bg-[#FAF9F5] p-3">
+                              <p className="font-display text-sm font-extrabold text-[#1C1917]">{language === 'tl' ? 'Kailan kumonsulta?' : 'When to seek help'}</p>
+                              <p className="mt-2 text-sm text-slate-700">{aiRecommendation.when_to_seek_help}</p>
+                            </div>
+                          )}
+                          {Array.isArray(aiRecommendation.safety_precautions) && aiRecommendation.safety_precautions.length > 0 && (
+                            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 sm:col-span-2">
+                              <p className="font-display text-sm font-extrabold text-amber-950">{language === 'tl' ? 'Kaligtasan' : 'Safety'}</p>
+                              <p className="mt-2 text-sm text-amber-900">{aiRecommendation.safety_precautions[0]}</p>
+                            </div>
+                          )}
                         </div>
-                        <div><p className="font-semibold text-slate-900">{language === 'tl' ? 'Kailan Kumonsulta?' : 'When to seek help'}</p><p>{aiRecommendation.when_to_seek_help}</p></div>
-                        <div><p className="font-semibold text-slate-900">{language === 'tl' ? 'Kaligtasan' : 'Safety'}</p><p>{aiRecommendation.safety_precautions?.[0]}</p></div>
                       </div>
                     )}
 
@@ -1237,51 +1268,35 @@ export default function DiseaseDetection({ onAnalysisComplete, onRequestActiveTa
                         </p>
                       </div>
                     )}
+
+                    {result && (
+                      <dl className="grid gap-2 border-t border-stone-200 pt-3 sm:grid-cols-3">
+                        {[
+                            [language === 'tl' ? 'Kondisyon' : 'Condition', displayDiseaseName],
+                            [
+                              language === 'tl' ? 'Tindi' : 'Severity',
+                              aiRecommendation?.severity?.level || getRiskLevelLabel(result.severity),
+                            ],
+                            [
+                              language === 'tl' ? 'Unang hakbang' : 'Next step',
+                              aiRecommendation?.immediate_actions?.[0] || getActionRequiredLabel(result.severity),
+                            ],
+                        ].map(([label, value]) => (
+                            <div key={label} className="min-w-0 rounded-xl border border-stone-200 bg-[#FAF9F5] p-3">
+                              <dt className="text-[11px] font-semibold text-[#57534E]">{label}</dt>
+                              <dd className="mt-1 break-words text-xs font-bold leading-relaxed text-[#1C1917]">{value}</dd>
+                            </div>
+                        ))}
+                      </dl>
+                    )}
                   </div>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
-
-      {/* Quick Guide */}
-      <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 shadow-lg border-2 border-emerald-200">
-        <CardHeader>
-          <CardTitle className="text-gray-900">{t.tips}</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg">
-                  <Camera className="w-5 h-5 text-emerald-600" />
-                </div>
-              <div>
-                <h4 className="text-sm text-gray-900 mb-1">{t.goodLighting}</h4>
-                <p className="text-xs text-gray-600">{t.goodLightingDesc}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg">
-                <Leaf className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h4 className="text-sm text-gray-900 mb-1">{t.clearFocus}</h4>
-                <p className="text-xs text-gray-600">{t.clearFocusDesc}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h4 className="text-sm text-gray-900 mb-1">{t.captureSymptoms}</h4>
-                <p className="text-xs text-gray-600">{t.captureSymptomsDesc}</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <Dialog open={showCamera} onOpenChange={(open) => !open && closeCamera()}>
         <DialogContent className="max-w-2xl">

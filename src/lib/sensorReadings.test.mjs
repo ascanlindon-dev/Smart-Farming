@@ -48,14 +48,16 @@ test('an unchanged database row becomes stale even when fetching succeeds', () =
   const later = sensorSnapshot(data, { now: now + SENSOR_FRESHNESS_MS });
   assert.equal(later.status, 'stale');
   assert.equal(later.temperature, null);
+  assert.equal(later.lastTemperature, 30);
 });
 
-test('a failed fetch hides previously available readings', () => {
+test('a failed fetch keeps last-known values separate from current readings', () => {
   const result = sensorSnapshot({ ...recent, temperature: 31, humidity: 75, isRaining: true }, { now, requestFailed: true });
   assert.equal(result.status, 'error');
   assert.equal(result.temperature, null);
   assert.equal(result.humidity, null);
   assert.equal(result.isRaining, null);
+  assert.equal(result.lastTemperature, 31);
   assert.equal(result.deviceId, 'wemos_d1r1');
 });
 
@@ -80,7 +82,12 @@ test('rain flags and numeric aliases are read without inventing a rain amount', 
   assert.equal(result.temperature, 30.5);
   assert.equal(result.humidity, 72);
   assert.equal(result.isRaining, false);
-  assert.equal(sensorSnapshot({ ...recent, rain: 1 }, { now }).isRaining, true);
-  assert.equal(sensorSnapshot({ ...recent, rain: 0 }, { now }).isRaining, false);
-  assert.equal(sensorSnapshot({ ...recent, rain: null }, { now }).isRaining, null);
+});
+
+test('raw rain sensor values are retained without guessing active-low or active-high logic', () => {
+  for (const rain of [0, 1, 1023]) {
+    const result = sensorSnapshot({ ...recent, rain }, { now });
+    assert.equal(result.rainRaw, rain);
+    assert.equal(result.isRaining, null);
+  }
 });

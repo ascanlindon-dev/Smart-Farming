@@ -55,12 +55,24 @@ class ClassifierPredictionTests(SimpleTestCase):
 
     def test_binary_rambutan_uses_saved_order_for_both_labels(self):
         names = ['mature', 'immature']
-        for index, label in enumerate(names):
+        classifications = ['ripe', 'unripe']
+        for index, (label, classification) in enumerate(zip(names, classifications)):
             with self.subTest(label=label), patch.object(views, '_rambutan_model', self.model(names, index)), patch.object(views.Prediction.objects, 'create'):
                 response = views.predict_rambutan(self.request())
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.data['label'], label)
+                self.assertEqual(response.data['classification'], classification)
                 self.assertEqual(response.data['class_names'], names)
+
+    def test_unrecognized_model_class_is_not_saved_as_ripe_or_unripe(self):
+        names = ['mature', 'uncertain']
+        model = self.model(names, index=1)
+        with patch.object(views, '_rambutan_model', model), patch.object(views.Prediction.objects, 'create') as save:
+            response = views.predict_rambutan(self.request())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['label'], 'unknown')
+        self.assertNotIn('classification', response.data)
+        save.assert_not_called()
 
     def test_uncertain_binary_predictions_are_not_called_non_fruit(self):
         names = ['mature', 'immature']

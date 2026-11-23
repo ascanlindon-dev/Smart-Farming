@@ -1,7 +1,8 @@
-import { useContext, useEffect, useId, useState } from 'react';
+import { useContext, useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { LanguageContext } from '../LanguageContext';
 import { apiFetch } from '../lib/apiFetch.mjs';
+import { readSessionData, writeSessionData } from '../lib/sessionDataCache.mjs';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
@@ -17,6 +18,7 @@ const translations = {
     refresh: 'Refresh',
     loading: 'Loading sensor readings...',
     error: 'Unable to load sensor readings. Please try again.',
+    stale: 'Showing saved readings. The latest refresh failed.',
     expired: 'Your session has expired. Please sign in again to view sensor readings.',
     retry: 'Try again',
     empty: 'No sensor readings yet. Readings will appear when your device sends data.',
@@ -36,6 +38,7 @@ const translations = {
     refresh: 'I-refresh',
     loading: 'Kinukuha ang mga reading ng sensor...',
     error: 'Hindi makuha ang mga reading ng sensor. Subukan muli.',
+    stale: 'Ipinapakita ang naka-save na readings. Nabigo ang pinakabagong pag-refresh.',
     expired: 'Nag-expire ang iyong session. Mag-sign in muli upang makita ang mga reading ng sensor.',
     retry: 'Subukan muli',
     empty: 'Wala pang reading ng sensor. Lalabas dito ang datos kapag nagpadala ang iyong device.',
@@ -47,25 +50,30 @@ const translations = {
   },
 };
 
+const READINGS_CACHE_KEY = '/api/sensors/readings/?page_size=50';
+
 export default function SensorReadings() {
   const { language } = useContext(LanguageContext);
   const t = translations[language] || translations.en;
   const [expanded, setExpanded] = useState(false);
   const contentId = useId();
   const [revision, setRevision] = useState(0);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [initialCache] = useState(() => readSessionData(READINGS_CACHE_KEY));
+  const [data, setData] = useState(initialCache?.data ?? null);
+  const hasData = useRef(Boolean(initialCache));
+  const [loading, setLoading] = useState(!initialCache);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true);
+    const cached = readSessionData(READINGS_CACHE_KEY);
+    if (cached) setData(cached.data);
+    setLoading(!cached && !hasData.current);
     setError(null);
-    setData(null);
 
     async function loadReadings() {
       try {
-        const response = await apiFetch('/api/sensors/readings/?page_size=50', {
+        const response = await apiFetch(READINGS_CACHE_KEY, {
           signal: controller.signal,
           cache: 'no-store',
         });
@@ -75,7 +83,11 @@ export default function SensorReadings() {
         }
         if (!response.ok) throw new Error('Unable to load sensor readings');
         const result = await response.json();
-        if (!controller.signal.aborted) setData(result);
+        if (!controller.signal.aborted) {
+          setData(result);
+          writeSessionData(READINGS_CACHE_KEY, result);
+          hasData.current = true;
+        }
       } catch {
         if (!controller.signal.aborted) setError('error');
       } finally {
@@ -116,15 +128,21 @@ export default function SensorReadings() {
         </div>
       </CardHeader>
       <CardContent id={contentId} className="min-w-0 space-y-4" aria-busy={loading}>
-        {loading ? (
-          <p role="status" className="py-8 text-center text-sm text-slate-600">{t.loading}</p>
-        ) : error ? (
+        {error === 'expired' ? (
           <div role="alert" className="space-y-3 rounded-xl bg-red-50 p-4 text-sm text-red-800">
-            <p>{t[error]}</p>
+            <p>{t.expired}</p>
+            <Button type="button" variant="outline" onClick={refresh}>{t.retry}</Button>
+          </div>
+        ) : loading && !data ? (
+          <p role="status" className="py-8 text-center text-sm text-slate-600">{t.loading}</p>
+        ) : error && !data ? (
+          <div role="alert" className="space-y-3 rounded-xl bg-red-50 p-4 text-sm text-red-800">
+            <p>{t.error}</p>
             <Button type="button" variant="outline" onClick={refresh}>{t.retry}</Button>
           </div>
         ) : data && (
           <>
+            {error && <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{t.stale}</p>}
             <Table aria-label={t.title}>
               <TableHeader>
                 <TableRow className="bg-slate-50">

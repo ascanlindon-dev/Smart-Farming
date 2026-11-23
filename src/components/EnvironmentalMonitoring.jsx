@@ -1,12 +1,51 @@
-import { apiFetch } from '../lib/apiFetch.mjs';
-import { useContext, useEffect, useState } from 'react';
+import { useContext } from 'react';
 import { LanguageContext } from '../LanguageContext';
 import { translations } from '../translation';
-import { sensorSnapshot } from '../lib/sensorReadings.mjs';
-import { Leaf3D, Lightbulb3D } from './Environmental3DIcons';
+import { useSensorReadings } from '../hooks/useSensorReadings';
+import {
+  Activity,
+  AlertTriangle,
+  CloudRain,
+  Droplets,
+  Lightbulb,
+  RefreshCw,
+  Thermometer,
+} from 'lucide-react';
 
-const SENSOR_REFRESH_INTERVAL_MS = 5000;
-const SENSOR_REQUEST_TIMEOUT_MS = 10000;
+function SensorRangeGauge({ value, scaleMinimum, scaleMaximum, minimum, maximum, unit, labels, language }) {
+  const markerPosition = value == null
+    ? null
+    : Math.max(0, Math.min(100, ((value - scaleMinimum) / (scaleMaximum - scaleMinimum)) * 100));
+  const rangeStart = ((minimum - scaleMinimum) / (scaleMaximum - scaleMinimum)) * 100;
+  const rangeWidth = ((maximum - minimum) / (scaleMaximum - scaleMinimum)) * 100;
+
+  return (
+    <div
+      role="img"
+      aria-label={language === 'tl'
+        ? `Target na saklaw: ${minimum} hanggang ${maximum}${unit}${value == null ? ', walang kasalukuyang reading' : `, kasalukuyang ${value}${unit}`}`
+        : `Target range: ${minimum} to ${maximum}${unit}${value == null ? ', no current reading' : `, current reading ${value}${unit}`}`}
+    >
+      <div className="relative h-3 rounded-full bg-amber-200">
+        <span
+          className="absolute inset-y-0 rounded-full bg-emerald-500"
+          style={{ left: `${rangeStart}%`, width: `${rangeWidth}%` }}
+        />
+        {markerPosition !== null && (
+          <span
+            className="absolute -top-1 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-white bg-[#1C1917] shadow"
+            style={{ left: `${markerPosition}%` }}
+          />
+        )}
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] font-semibold leading-tight text-[#57534E] sm:text-[11px]">
+        <span className="text-left">{labels[0]}</span>
+        <span className="text-center text-[#14532D]">{labels[1]} · {minimum}–{maximum}{unit}</span>
+        <span className="text-right">{labels[2]}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function EnvironmentalMonitoring() {
   const { language: lang } = useContext(LanguageContext);
@@ -16,19 +55,11 @@ export default function EnvironmentalMonitoring() {
     humidity: translations[lang]?.humidity || (lang === 'tl' ? 'Kahalumigmigan' : 'Humidity'),
   };
 
-  const [iotData, setIotData] = useState(null);
-  const [fetchState, setFetchState] = useState({ loading: true, error: false, checkedAt: null });
-  const [refreshTick, setRefreshTick] = useState(0);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    const timerId = setTimeout(() => setLoaded(true), 80);
-    return () => clearTimeout(timerId);
-  }, []);
+  const { snapshot, loading, error, checkedAt, refresh } = useSensorReadings();
 
   const computeTemp = (tempVal) => {
     if (tempVal == null) return { label: L.noData, action: '' };
-    if (tempVal < 20) return { label: lang === 'tl' ? 'Malamig' : 'Cold', action: lang === 'tl' ? 'Protektahan ang halaman sa lamig' : 'Protect crops from cold' };
+    if (tempVal < 24) return { label: lang === 'tl' ? 'Mababa sa target' : 'Below target', action: lang === 'tl' ? 'Bantayan ang bagong usbong at kondisyon ng puno' : 'Monitor new growth and overall tree condition' };
     if (tempVal <= 32) return { label: lang === 'tl' ? 'Normal' : 'Normal', action: lang === 'tl' ? 'Maayos ang temperatura ngayon' : 'Temperature is in a healthy range' };
     if (tempVal <= 36) return { label: lang === 'tl' ? 'Mainit' : 'Warm', action: lang === 'tl' ? 'Bantayan ang halumigmig ng lupa at kondisyon ng rambutan' : 'Monitor soil moisture and rambutan tree condition' };
     return { label: lang === 'tl' ? 'Napaka-init' : 'Very hot', action: lang === 'tl' ? 'Bawasan ang trabaho sa tanghali' : 'Avoid heavy field work at noon' };
@@ -36,61 +67,38 @@ export default function EnvironmentalMonitoring() {
 
   const computeHumidity = (humidityVal) => {
     if (humidityVal == null) return { label: L.noData, action: '' };
-    if (humidityVal < 40) return { label: lang === 'tl' ? 'Masyadong tuyo' : 'Too dry', action: lang === 'tl' ? 'Bantayan ang pagkatuyo ng halaman at lupa' : 'Monitor plant and soil dryness' };
-    if (humidityVal <= 75) return { label: lang === 'tl' ? 'Katamtaman' : 'Balanced', action: lang === 'tl' ? 'Magandang humidity para sa tanim' : 'Humidity is in a healthy range' };
+    if (humidityVal < 65) return { label: lang === 'tl' ? 'Mababa sa target' : 'Below target', action: lang === 'tl' ? 'Bantayan ang pagkatuyo ng lupa at pagkalanta ng dahon' : 'Check soil dryness and watch for wilting leaves' };
+    if (humidityVal <= 80) return { label: lang === 'tl' ? 'Nasa target' : 'In target', action: lang === 'tl' ? 'Nasa target ang halumigmig; patuloy na suriin ang mga dahon' : 'Humidity is within target; continue checking the leaves' };
     return { label: lang === 'tl' ? 'Masyadong mahalumigmig' : 'Too humid', action: lang === 'tl' ? 'Dagdagan ang airflow at bantayan ang kondisyon ng tanim' : 'Improve airflow and monitor overall crop condition' };
   };
 
-   const computeWeather = (raining) => {
-    if (raining == null) return { label: L.noData, action: '' };
+  const computeWeather = (raining) => {
+    if (raining == null) {
+      return {
+        label: lang === 'tl' ? 'Hindi matukoy' : 'Unverified',
+        action: lang === 'tl'
+          ? 'Raw sensor signal lamang ang available. I-verify sa firmware ang active LOW/HIGH bago ito bigyang-kahulugan bilang ulan.'
+          : 'Only a raw sensor signal is available. Verify the firmware active LOW/HIGH logic before interpreting it as rain.',
+      };
+    }
     if (raining) {
-      return { label: lang === 'tl' ? 'May ulan' : 'Raining', action: lang === 'tl' ? 'Iwasan muna ang pag-spray ng kemikal' : 'Avoid chemical spraying for now' };
+      return {
+        label: lang === 'tl' ? 'May ulan' : 'Raining',
+        action: lang === 'tl'
+          ? 'May aktuwal na ulan. Kung gagamit ng pesticide, sundin ang rainfast interval sa label; hindi ito rekomendasyong mag-apply.'
+          : 'Rain is detected. If using a pesticide, follow its label rainfast interval; this is not a recommendation to apply.',
+      };
     }
     return { label: lang === 'tl' ? 'Walang ulan' : 'No rain', action: lang === 'tl' ? 'Maayos ang kondisyon sa bukid' : 'Field conditions look stable' };
   };
 
-  useEffect(() => {
-    let mounted = true;
-    let controller;
-    let pollTimer;
-
-    async function poll() {
-      controller = new AbortController();
-      const requestController = controller;
-      const timeoutId = setTimeout(() => requestController.abort(), SENSOR_REQUEST_TIMEOUT_MS);
-      setFetchState((previous) => ({ ...previous, loading: true }));
-      try {
-        const res = await apiFetch('/api/sensors/', { signal: requestController.signal, cache: 'no-store' });
-        if (!res.ok) throw new Error('Sensor request failed');
-        const j = await res.json();
-        if (!j || typeof j !== 'object' || Array.isArray(j) || j.error) throw new Error('Invalid sensor response');
-        if (!mounted) return;
-
-        setIotData(j);
-        setFetchState({ loading: false, error: false, checkedAt: Date.now() });
-      } catch {
-        if (mounted) setFetchState({ loading: false, error: true, checkedAt: Date.now() });
-      } finally {
-        clearTimeout(timeoutId);
-        if (mounted) pollTimer = setTimeout(poll, SENSOR_REFRESH_INTERVAL_MS);
-      }
-    }
-
-    poll();
-
-    return () => {
-      mounted = false;
-      clearTimeout(pollTimer);
-      controller?.abort();
-    };
-  }, [refreshTick]);
-
-  const snapshot = sensorSnapshot(iotData, { requestFailed: fetchState.error });
-  const displayedTemperature = snapshot.temperature;
-  const displayedHumidity = snapshot.humidity;
-  const displayedIsRaining = snapshot.isRaining;
-  const hasMeasurements = [displayedTemperature, displayedHumidity, displayedIsRaining].some((value) => value != null);
-  const connecting = fetchState.loading && fetchState.checkedAt == null;
+  const displayedTemperature = snapshot.temperature ?? snapshot.lastTemperature;
+  const displayedHumidity = snapshot.humidity ?? snapshot.lastHumidity;
+  const displayedIsRaining = snapshot.isRaining ?? snapshot.lastIsRaining;
+  const hasCurrentMeasurements = [snapshot.temperature, snapshot.humidity, snapshot.isRaining, snapshot.rainRaw].some((value) => value != null);
+  const hasMeasurements = [displayedTemperature, displayedHumidity, displayedIsRaining, snapshot.lastRainRaw].some((value) => value != null);
+  const hasStaleMeasurements = hasMeasurements && !hasCurrentMeasurements;
+  const connecting = loading && checkedAt == null;
   const connectionMessages = {
     recent: hasMeasurements
       ? [lang === 'tl' ? 'May bagong sensor reading' : 'Recent sensor reading', lang === 'tl' ? 'Konektado ang server at may bagong datos mula sa device.' : 'The server is connected and the device has sent a recent reading.']
@@ -104,133 +112,200 @@ export default function EnvironmentalMonitoring() {
     ? [lang === 'tl' ? 'Kumokonekta sa sensors...' : 'Connecting to sensors...', lang === 'tl' ? 'Kinukuha ang pinakabagong reading.' : 'Fetching the latest saved reading.']
     : connectionMessages[snapshot.status];
 
-  const tempStat = computeTemp(displayedTemperature);
-  const humidityStat = computeHumidity(displayedHumidity);
+  const tempStat = computeTemp(snapshot.temperature);
+  const humidityStat = computeHumidity(snapshot.humidity);
   const weatherStat = computeWeather(displayedIsRaining);
-  const recommendationText = [weatherStat.action, tempStat.action, humidityStat.action].filter(Boolean).join(' | ');
-
-  const cardClass = `mb-3 rounded-2xl p-4 shadow-sm transition-opacity transition-transform duration-400 sm:rounded-3xl sm:p-5 ${
-    loaded ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
-  }`;
-  const statHeaderClass = 'flex flex-wrap items-start justify-between gap-3 sm:items-center';
-  const statTitleClass = 'text-base font-semibold tracking-wide sm:text-lg';
-  const statValueClass = 'my-3 break-words text-3xl font-extrabold leading-tight text-white sm:text-[56px]';
-  const statBadgeClass = 'shrink-0 rounded-full bg-white/20 px-3 py-1.5 text-sm font-medium sm:px-3.5 sm:text-base';
-  const statActionClass = 'text-base leading-7 text-white/95 sm:text-lg';
+  const recommendationText = hasCurrentMeasurements
+    ? [computeWeather(snapshot.isRaining).action, tempStat.action, humidityStat.action].filter(Boolean).join(' | ')
+    : null;
+  const outsideTarget = (value, minimum, maximum) => value != null && (value < minimum || value > maximum);
+  const needsAttention = outsideTarget(snapshot.temperature, 24, 32)
+    || outsideTarget(snapshot.humidity, 65, 80);
+  const connectionTone = snapshot.status === 'recent' && hasMeasurements
+    ? 'border-emerald-200 bg-emerald-50 text-[#14532D]'
+    : error
+      ? 'border-red-200 bg-red-50 text-red-800'
+      : 'border-stone-200 bg-stone-100 text-stone-700';
+  const temperatureBadgeTone = snapshot.temperature == null
+    ? 'bg-stone-100 text-stone-700'
+    : outsideTarget(snapshot.temperature, 24, 32)
+      ? 'bg-amber-100 text-amber-900'
+      : 'bg-emerald-100 text-emerald-900';
+  const humidityBadgeTone = snapshot.humidity == null
+    ? 'bg-stone-100 text-stone-700'
+    : outsideTarget(snapshot.humidity, 65, 80)
+      ? 'bg-amber-100 text-amber-900'
+      : 'bg-emerald-100 text-emerald-900';
+  const rainBadgeTone = snapshot.isRaining == null
+    ? 'bg-stone-100 text-stone-700'
+    : snapshot.isRaining
+      ? 'bg-blue-100 text-blue-900'
+      : 'bg-emerald-100 text-emerald-900';
+  const connectionStateLabel = snapshot.status === 'recent' && hasMeasurements
+    ? (lang === 'tl' ? 'May koneksyon' : 'Connected')
+    : snapshot.status === 'error'
+      ? (lang === 'tl' ? 'Hindi maabot' : 'Unavailable')
+      : snapshot.status === 'stale'
+        ? (lang === 'tl' ? 'Walang bagong reading' : 'No recent reading')
+        : snapshot.status === 'unknown_time'
+          ? (lang === 'tl' ? 'Hindi tiyak ang oras' : 'Timestamp unknown')
+          : (lang === 'tl' ? 'Naghihintay ng datos' : 'Waiting for data');
 
   return (
-    <>
-    <div className="mx-auto max-w-4xl px-3 pb-16 pt-3 text-lg sm:px-6 sm:pb-24 sm:pt-4 sm:text-xl">
-      <section aria-label={lang === 'tl' ? 'Koneksyon ng sensor' : 'Sensor connection'} className="sensor-connection mb-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-        <div className="min-w-0 flex-1 wrap-break-word">
-          <p role="status" className="font-semibold text-slate-900">{connectionTitle}</p>
-          <p className="mt-1 leading-6">{connectionDescription}</p>
-          {snapshot.deviceId && <p className="mt-2">{lang === 'tl' ? 'Device' : 'Device'}: {snapshot.deviceId}</p>}
-          {snapshot.receivedAt && <p className="mt-1">{lang === 'tl' ? 'Huling reading' : 'Last device reading'}: {new Date(snapshot.receivedAt).toLocaleString()}</p>}
-          {fetchState.checkedAt && <p className="mt-1 text-xs text-slate-500">{lang === 'tl' ? 'Huling pag-check' : 'Last checked'}: {new Date(fetchState.checkedAt).toLocaleTimeString()} · {lang === 'tl' ? 'Awtomatikong nagre-refresh bawat 5 segundo' : 'Refreshes every 5 seconds'}</p>}
+    <section className="space-y-4 sm:space-y-5" aria-label={lang === 'tl' ? 'Pagsubaybay sa kapaligiran' : 'Environmental monitoring'}>
+      <section aria-label={lang === 'tl' ? 'Koneksyon ng sensor' : 'Sensor connection'} className="sensor-connection rounded-3xl border border-stone-200 bg-white p-4 sm:p-5">
+        <div className="flex min-w-0 items-start gap-3 sm:items-center">
+          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${connectionTone}`}>
+            <Activity className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p role="status" className="font-bold text-[#1C1917]">{connectionTitle}</p>
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${connectionTone}`}>
+                {connectionStateLabel}
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-[#57534E] sm:text-sm">{connectionDescription}</p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#57534E]">
+              {snapshot.deviceId && <span>{lang === 'tl' ? 'Device' : 'Device'}: {snapshot.deviceId}</span>}
+              {snapshot.receivedAt && (
+                <span>{lang === 'tl' ? 'Huling reading' : 'Last reading'}: {new Date(snapshot.receivedAt).toLocaleString(lang === 'tl' ? 'fil-PH' : 'en-PH')}</span>
+              )}
+              {checkedAt && (
+                <span>{lang === 'tl' ? 'Huling check' : 'Last checked'}: {new Date(checkedAt).toLocaleTimeString()}</span>
+              )}
+            </div>
+          </div>
         </div>
-        <button type="button" disabled={fetchState.loading} onClick={() => setRefreshTick((value) => value + 1)} className="sensor-refresh rounded-lg border border-emerald-300 bg-white px-4 py-3 text-emerald-800 disabled:opacity-50">
-          {fetchState.loading ? (lang === 'tl' ? 'Naglo-load...' : 'Refreshing...') : (lang === 'tl' ? 'I-refresh' : 'Refresh sensors')}
+        <button
+          type="button"
+          disabled={loading}
+          onClick={refresh}
+          className="sensor-refresh inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-300 bg-[#FAF9F5] px-4 font-bold text-[#1C1917] transition hover:border-[#14532D] hover:text-[#14532D] disabled:cursor-wait disabled:opacity-60"
+        >
+          <RefreshCw className={`h-4 w-4 text-[#14532D] ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
+          {loading ? (lang === 'tl' ? 'Naglo-load...' : 'Refreshing...') : (lang === 'tl' ? 'I-refresh' : 'Refresh sensors')}
         </button>
       </section>
-      <div className={cardClass} style={{ background: 'linear-gradient(180deg,#FF7A18,#FF4D00)', color: '#fff', boxShadow: '0 14px 40px rgba(255,90,0,0.12)' }}>
-        <div className={statHeaderClass}>
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="text-3xl sm:text-4xl">🌡️</div>
-            <div className={statTitleClass}>{lang === 'tl' ? 'TEMPERATURA' : 'TEMPERATURE'}</div>
-          </div>
-          <span className={statBadgeClass}>{tempStat.label}</span>
-        </div>
-        <div className={statValueClass}>
-          {displayedTemperature != null ? `${Number(displayedTemperature).toFixed(1)}°C` : L.noData}
-        </div>
-        <div className={statActionClass}>{tempStat.action}</div>
-      </div>
 
-      <div className={cardClass} style={{ background: 'linear-gradient(180deg,#10B981,#059669)', color: '#fff', boxShadow: '0 14px 40px rgba(6,95,70,0.08)' }}>
-        <div className={statHeaderClass}>
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="text-3xl sm:text-4xl">💧</div>
-            <div className={statTitleClass}>{L.humidity}</div>
-          </div>
-          <span className={statBadgeClass}>{humidityStat.label}</span>
-        </div>
-        <div className={statValueClass}>{displayedHumidity != null ? `${Number(displayedHumidity).toFixed(1)}%` : L.noData}</div>
-        <div className={statActionClass}>{humidityStat.action}</div>
-      </div>
-
-      <div className={cardClass} style={{ background: 'linear-gradient(180deg,#0f172a,#071029)', color: '#fff', boxShadow: '0 14px 40px rgba(2,6,23,0.12)' }}>
-        <div className={statHeaderClass}>
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="text-3xl sm:text-4xl">🌤️</div>
-            <div className={statTitleClass}>{lang === 'tl' ? 'SENSOR NG ULAN' : 'RAIN SENSOR'}</div>
-          </div>
-          <span className={statBadgeClass}>{weatherStat.label}</span>
-        </div>
-        <div className={statValueClass}>
-          {displayedIsRaining == null ? L.noData : weatherStat.label}
-        </div>
-        <div className={statActionClass}>{weatherStat.action}</div>
-      </div>
-
-      <div className={`${cardClass} border border-emerald-100 bg-white`} style={{ boxShadow: '0 14px 40px rgba(16,185,129,0.08)' }}>
-        <div>
-          <div className="text-base font-semibold text-emerald-700 sm:text-lg">{lang === 'tl' ? 'Rekomendasyon' : 'Recommendation'}</div>
-          <div className="mt-2 text-base leading-7 text-slate-700 sm:text-lg">
-            {recommendationText || (lang === 'tl' ? 'Hinihintay ang bagong sensor reading bago magbigay ng payo.' : 'Waiting for a current sensor reading before giving advice.')}
+      <section className={`flex flex-col gap-3 rounded-3xl border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5 ${
+        needsAttention
+          ? 'border-amber-200 bg-amber-50'
+          : hasMeasurements
+            ? 'border-emerald-200 bg-emerald-50'
+            : 'border-stone-200 bg-white'
+      }`}>
+        <div className="flex items-start gap-3">
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+            needsAttention ? 'bg-amber-100 text-amber-800' : 'bg-white/80 text-[#14532D]'
+          }`}>
+            {needsAttention ? <AlertTriangle className="h-5 w-5" aria-hidden="true" /> : <Lightbulb className="h-5 w-5" aria-hidden="true" />}
+          </span>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#14532D]">
+              {lang === 'tl' ? 'Mga dapat gawin ngayon' : 'What to do today'}
+            </p>
+            <p className="mt-1 text-sm font-semibold leading-relaxed text-[#1C1917]">
+              {recommendationText || (lang === 'tl' ? 'Hinihintay ang bagong sensor reading bago magbigay ng payo.' : 'Waiting for a current sensor reading before giving advice.')}
+            </p>
           </div>
         </div>
+      </section>
+
+      <div className="environment-sensor-grid grid gap-4 sm:gap-5">
+        <article className="flex min-w-0 flex-col justify-between gap-5 rounded-3xl border border-stone-200 bg-white p-5 sm:p-6">
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-[#14532D]">
+                  <Thermometer className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <h3 className="truncate font-bold text-[#1C1917]">{lang === 'tl' ? 'Temperatura' : 'Temperature'}</h3>
+              </div>
+              <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${temperatureBadgeTone}`}>{tempStat.label}</span>
+            </div>
+            <p className="mt-5 font-extrabold tracking-tight text-4xl text-[#1C1917]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {displayedTemperature == null ? L.noData : `${Number(displayedTemperature).toFixed(1)}°C`}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-[#57534E]">
+              {hasStaleMeasurements && snapshot.temperature == null
+                ? (lang === 'tl' ? 'Huling naka-save na sukat; hindi ito kasalukuyang reading.' : 'Last saved measurement; this is not a current reading.')
+                : tempStat.action || (lang === 'tl' ? 'Target na saklaw: 24–32°C' : 'Target range: 24–32°C')}
+            </p>
+          </div>
+          <SensorRangeGauge
+            value={snapshot.temperature}
+            scaleMinimum={16}
+            scaleMaximum={40}
+            minimum={24}
+            maximum={32}
+            unit="°C"
+            language={lang}
+            labels={lang === 'tl' ? ['Malamig', 'Ligtas', 'Mainit'] : ['Cool', 'Target', 'Hot']}
+          />
+        </article>
+
+        <article className="flex min-w-0 flex-col justify-between gap-5 rounded-3xl border border-stone-200 bg-white p-5 sm:p-6">
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-800">
+                  <Droplets className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <h3 className="truncate font-bold text-[#1C1917]">{L.humidity}</h3>
+              </div>
+              <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${humidityBadgeTone}`}>{humidityStat.label}</span>
+            </div>
+            <p className="mt-5 font-extrabold tracking-tight text-4xl text-[#1C1917]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {displayedHumidity == null ? L.noData : `${Number(displayedHumidity).toFixed(1)}%`}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-[#57534E]">
+              {hasStaleMeasurements && snapshot.humidity == null
+                ? (lang === 'tl' ? 'Huling naka-save na sukat; hindi ito kasalukuyang reading.' : 'Last saved measurement; this is not a current reading.')
+                : humidityStat.action || (lang === 'tl' ? 'Target na saklaw: 65–80%' : 'Target range: 65–80%')}
+            </p>
+          </div>
+          <SensorRangeGauge
+            value={snapshot.humidity}
+            scaleMinimum={0}
+            scaleMaximum={100}
+            minimum={65}
+            maximum={80}
+            unit="%"
+            language={lang}
+            labels={lang === 'tl' ? ['Tuyo', 'Ligtas', 'Mahalumigmig'] : ['Dry', 'Target', 'Humid']}
+          />
+        </article>
+
+        <article className="flex min-w-0 flex-col justify-between gap-5 rounded-3xl border border-stone-200 bg-white p-5 sm:p-6">
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-800">
+                  <CloudRain className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <h3 className="truncate font-bold text-[#1C1917]">{lang === 'tl' ? 'Aktuwal na Pag-detect ng Ulan' : 'Actual Rain Detection'}</h3>
+              </div>
+              <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${rainBadgeTone}`}>{weatherStat.label}</span>
+            </div>
+            <p className="mt-5 font-extrabold tracking-tight text-3xl text-[#1C1917]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {displayedIsRaining == null && snapshot.rainRaw == null ? L.noData : weatherStat.label}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-[#57534E]">
+              {snapshot.status !== 'recent' && displayedIsRaining != null
+                ? (lang === 'tl' ? 'Huling naka-save na status; hindi ito kasalukuyang reading.' : 'Last saved status; this is not a current reading.')
+                : weatherStat.action || (lang === 'tl' ? 'Lalabas dito ang status kapag may sensor reading.' : 'The rain status appears when a sensor reading is available.')}
+            </p>
+          </div>
+        </article>
       </div>
 
-      <footer className="mt-4 px-2 text-center text-sm leading-6 text-gray-500 sm:text-base">© 2025 Smart Farming for Rambutan Cultivation</footer>
-    </div>
-    <div className="environment-status-grid mt-4 grid gap-4">
-  {/* Farm Status */}
-  <article className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-linear-to-br from-emerald-50 to-green-100 p-6">
-    <div className="absolute -bottom-3 -right-2 h-28 w-28 opacity-20">
-      <Leaf3D />
-    </div>
-
-    <div className="mb-3 h-14 w-14 rounded-2xl bg-white/60 p-1.5">
-      <Leaf3D />
-    </div>
-
-    <p className="text-xs font-bold tracking-wide text-emerald-700">
-      {lang === 'tl' ? 'KALAGAYAN NG BUKID' : 'FARM STATUS'}
-    </p>
-
-    <p className="mt-1 text-2xl font-black text-emerald-950">
-      {hasMeasurements ? (lang === 'tl' ? 'May sensor readings' : 'Readings available') : (lang === 'tl' ? 'Hinihintay ang datos' : 'Waiting for data')}
-    </p>
-
-    <p className="mt-1 text-sm text-emerald-700">
-      {snapshot.status === 'recent'
-        ? (lang === 'tl' ? 'Tingnan ang bawat sensor reading sa itaas.' : 'Review the available sensor readings above.')
-        : (lang === 'tl' ? 'Walang kasalukuyang sensor data.' : 'Current sensor data is unavailable.')}
-    </p>
-  </article>
-
-  {/* Recommendation */}
-  <article className="flex items-center gap-4 rounded-3xl border border-amber-100 bg-white p-6 shadow-[0_2px_5px_rgba(15,23,42,.06)]">
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 p-1.5">
-      <Lightbulb3D />
-    </div>
-
-    <div>
-      <p className="text-xs font-bold tracking-wide text-slate-500">
-        {lang === 'tl' ? 'REKOMENDASYON' : 'RECOMMENDATION'}
+      <p className="text-[11px] leading-relaxed text-[#57534E]">
+        {lang === 'tl'
+          ? 'Gabay lamang ang target ranges. Patuloy na obserbahan ang mga puno at dahon.'
+          : 'Target ranges are a guide. Continue observing the trees and leaves.'}
       </p>
-
-      <p className="mt-1 text-sm font-medium text-slate-700">
-        {recommendationText ||
-          (lang === 'tl'
-            ? 'Hinihintay ang sensor data.'
-            : 'Waiting for sensor data.')}
-      </p>
-    </div>
-  </article>
-</div>
-    </>
+    </section>
   );
 
 }

@@ -1,9 +1,8 @@
 import { useContext, useMemo, useState } from 'react';
 import { useWeather } from '../hooks/useWeather';
+import { useSensorReadings } from '../hooks/useSensorReadings';
 import { WeatherRefreshStatus } from './WeatherRefreshStatus';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
@@ -11,65 +10,51 @@ import {
   AlertTriangle,
   Wind,
   Thermometer,
-  CloudSnow,
-  Sun,
-  Clock,
   CheckCircle2,
-  XCircle,
-  Droplets,
-  Cloud,
-  CloudDrizzle,
 } from 'lucide-react';
 import { LanguageContext } from '../LanguageContext';
 import { translations } from '../translation';
-import { RainCloud3D } from './Environmental3DIcons';
 
 const DEFAULT_WEATHER_QUERY = 'Victoria, Oriental Mindoro, Philippines';
 const FIXED_LOCATION_LABEL = 'Victoria, Oriental Mindoro, Philippines';
-const WEATHER_FORECAST_STORAGE_KEY = 'latest_weather_forecast';
-const WEATHER_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 
-const resolveWeatherQuery = async (fallbackQuery = DEFAULT_WEATHER_QUERY) => {
-  if (typeof navigator !== 'undefined' && navigator.geolocation) {
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 600000,
-        });
-      });
-      return `${position.coords.latitude},${position.coords.longitude}`;
-    } catch (error) {
-      // Fall back to the default city if geolocation is blocked or unavailable.
-    }
-  }
-
-  return fallbackQuery;
+const parseForecastDate = (dateString) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateString || ''));
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
+  return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const getSavedWeatherForecast = () => {
-  try {
-    const saved = JSON.parse(localStorage.getItem(WEATHER_FORECAST_STORAGE_KEY) || 'null');
-    return Array.isArray(saved?.forecast) && saved.forecast.length > 0 ? saved : null;
-  } catch (error) {
-    return null;
-  }
+const getManilaDate = () => {
+  const dateParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const parts = Object.fromEntries(dateParts.map(({ type, value }) => [type, value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
 };
 
 const getDayLabel = (dateString, fallbackIndex, language) => {
   const locale = language === 'tl' ? 'fil-PH' : 'en-US';
 
-  if (dateString) {
-    const date = new Date(dateString);
-    if (!Number.isNaN(date.getTime())) {
-      return date.toLocaleDateString(locale, { weekday: 'long' });
-    }
-  }
+  const date = parseForecastDate(dateString);
+  if (date) return date.toLocaleDateString(locale, { weekday: 'long' });
 
   const fallbackDate = new Date();
   fallbackDate.setDate(fallbackDate.getDate() + fallbackIndex);
   return fallbackDate.toLocaleDateString(locale, { weekday: 'long' });
+};
+
+const getDateLabel = (dateString, fallbackIndex, language) => {
+  const locale = language === 'tl' ? 'fil-PH' : 'en-US';
+  const date = parseForecastDate(dateString);
+  if (date) return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+
+  const fallbackDate = new Date();
+  fallbackDate.setDate(fallbackDate.getDate() + fallbackIndex);
+  return fallbackDate.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 };
 
 const normalizeCondition = (condition) => {
@@ -81,24 +66,7 @@ const normalizeCondition = (condition) => {
   if (/(snow|sleet|ice)/.test(cond)) return 'snow';
   if (/(drizzle|freezing drizzle|rain|shower)/.test(cond)) return 'rainy';
 
-  return 'sunny';
-};
-
-const getWeatherIcon = (condition) => {
-  switch (normalizeCondition(condition)) {
-    case 'storm':
-      return <AlertTriangle className="h-12 w-12" />;
-    case 'rainy':
-      return <CloudRain className="h-12 w-12" />;
-    case 'light_rain':
-      return <CloudDrizzle className="h-12 w-12" />;
-    case 'cloudy':
-      return <Cloud className="h-12 w-12" />;
-    case 'snow':
-      return <CloudSnow className="h-12 w-12" />;
-    default:
-      return <Sun className="h-12 w-12" />;
-  }
+  return 'unknown';
 };
 
 const getWeatherBackground = (condition) => {
@@ -113,6 +81,8 @@ const getWeatherBackground = (condition) => {
       return 'bg-gradient-to-br from-gray-100 to-slate-100';
     case 'snow':
       return 'bg-gradient-to-br from-cyan-50 to-slate-100';
+    case 'unknown':
+      return 'bg-stone-100';
     default:
       return 'bg-gradient-to-br from-orange-100 to-yellow-100';
   }
@@ -130,6 +100,8 @@ const getWeatherIconColor = (condition) => {
       return 'text-gray-400';
     case 'snow':
       return 'text-cyan-500';
+    case 'unknown':
+      return 'text-stone-500';
     default:
       return 'text-orange-400';
   }
@@ -137,15 +109,190 @@ const getWeatherIconColor = (condition) => {
 
 const getShortDayLabel = (dateString, fallbackIndex, language) => {
   const locale = language === 'tl' ? 'fil-PH' : 'en-US';
-  const date = dateString ? new Date(dateString) : new Date(Date.now() + fallbackIndex * 86400000);
-  return Number.isNaN(date.getTime()) ? getDayLabel(dateString, fallbackIndex, language) : date.toLocaleDateString(locale, { weekday: 'short' });
+  const date = parseForecastDate(dateString);
+  if (date) return date.toLocaleDateString(locale, { weekday: 'short' });
+
+  const fallbackDate = new Date();
+  fallbackDate.setDate(fallbackDate.getDate() + fallbackIndex);
+  return fallbackDate.toLocaleDateString(locale, { weekday: 'short' });
 };
 
-const Forecast3DIcon = ({ condition }) => {
-  const kind = normalizeCondition(condition);
-  if (kind === 'rainy' || kind === 'light_rain' || kind === 'storm') return <RainCloud3D isRaining />;
-  if (kind === 'cloudy') return <RainCloud3D />;
-  return <svg viewBox="0 0 48 48" className="h-full w-full" fill="none" aria-hidden="true"><defs><radialGradient id="weather-sun" cx="38%" cy="30%" r="65%"><stop stopColor="#fef9c3"/><stop offset="1" stopColor="#f59e0b"/></radialGradient><filter id="weather-sun-shadow"><feDropShadow dy="2" stdDeviation="2" floodColor="#f59e0b66"/></filter></defs>{[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => <line key={angle} x1={24 + Math.cos(angle * Math.PI / 180) * 15} y1={24 + Math.sin(angle * Math.PI / 180) * 15} x2={24 + Math.cos(angle * Math.PI / 180) * 20} y2={24 + Math.sin(angle * Math.PI / 180) * 20} stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>)}<circle cx="24" cy="24" r="12" fill="url(#weather-sun)" filter="url(#weather-sun-shadow)"/><circle cx="20" cy="19" r="4" fill="#fff" fillOpacity=".4"/></svg>;
+const weatherKindForCode = (code) => {
+  if (code === null || code === undefined || typeof code === 'boolean' || String(code).trim() === '' || !Number.isInteger(Number(code))) return null;
+  const value = Number(code);
+  if (value === 0 || value === 1) return 'sunny';
+  if (value === 2 || value === 3 || value === 45 || value === 48) return 'cloudy';
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(value)) return 'rainy';
+  if ([71, 73, 75, 77, 85, 86].includes(value)) return 'snow';
+  if ([95, 96, 99].includes(value)) return 'storm';
+  return 'unknown';
+};
+
+const WeatherIcon = ({ condition, code, className = 'h-full w-full' }) => {
+  const kind = weatherKindForCode(code) ?? normalizeCondition(condition);
+  const isPartlyCloudy = kind === 'cloudy' && (Number(code) === 2 || /(partly|mostly|mainly)/i.test(String(condition || '')));
+  const hasCloud = kind !== 'sunny';
+  const hasRain = kind === 'rainy' || kind === 'storm';
+  const hasSnow = kind === 'snow';
+
+  if (!hasCloud) {
+    return (
+      <svg viewBox="0 0 48 48" className={className} fill="none" aria-hidden="true">
+        <g className="wx-anim-sun">
+          <circle cx="24" cy="24" r="9" fill="#fbbf24" />
+          <path d="M24 3v7m0 28v7M3 24h7m28 0h7M9.2 9.2l5 5m19.6 19.6 5 5m0-29.6-5 5m-19.6 19.6-5 5" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="21" cy="20" r="3" fill="#fff" fillOpacity=".45" />
+        </g>
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 48 48" className={className} fill="none" aria-hidden="true">
+      {isPartlyCloudy && (
+        <g className="wx-anim-sun">
+          <circle cx="31" cy="17" r="7" fill="#fbbf24" />
+          <path d="M31 4v4m0 18v4m-13-13h4m18 0h4m-22-9 3 3m13 13 3 3m0-19-3 3m-13 13-3 3" stroke="#d97706" strokeWidth="2" strokeLinecap="round" />
+        </g>
+      )}
+      <g className="wx-anim-cloud">
+        <path d="M38 31H13a8 8 0 1 1 1.4-15.9A12 12 0 0 1 38.2 19a7 7 0 0 1-.2 12Z" fill={kind === 'unknown' ? '#d6d3d1' : '#bae6fd'} stroke={kind === 'unknown' ? '#78716c' : '#0284c7'} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M17 18c4-5 9-7 14-5" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" opacity=".8" />
+      </g>
+      {hasRain && (
+        <>
+          <path className="wx-anim-drop-1" d="m15 36-2 5" stroke="#0284c7" strokeWidth="2.2" strokeLinecap="round" />
+          <path className="wx-anim-drop-2" d="m24 36-2 5" stroke="#0284c7" strokeWidth="2.2" strokeLinecap="round" />
+          <path className="wx-anim-drop-3" d="m33 36-2 5" stroke="#0284c7" strokeWidth="2.2" strokeLinecap="round" />
+        </>
+      )}
+      {hasSnow && (
+        <g fill="#0284c7">
+          <circle cx="15" cy="38" r="1.7" />
+          <circle cx="24" cy="42" r="1.7" />
+          <circle cx="33" cy="38" r="1.7" />
+        </g>
+      )}
+      {kind === 'storm' && (
+        <path d="m29 34-7 9h5l-1 6 9-11h-5l2-4Z" fill="#fbbf24" stroke="#b45309" strokeWidth="1" strokeLinejoin="round" />
+      )}
+    </svg>
+  );
+};
+
+const metricOrNull = (value) => {
+  if (value === null || value === undefined || String(value).trim() === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatForecastTime = (value, language) => {
+  const match = /T(\d{2}):(\d{2})/.exec(String(value || ''));
+  if (!match) return null;
+  return new Date(2000, 0, 1, Number(match[1]), Number(match[2])).toLocaleTimeString(
+    language === 'tl' ? 'fil-PH' : 'en-US',
+    { hour: 'numeric', minute: '2-digit' },
+  );
+};
+
+const getForecastBadge = (day, language) => {
+  const rainfall = metricOrNull(day?.rainfall);
+  const rainChance = metricOrNull(day?.rainChance);
+  const hasRainData = rainfall !== null || rainChance !== null;
+
+  if (!hasRainData) {
+    return {
+      label: language === 'tl' ? 'Limitadong datos' : 'Limited data',
+      className: 'bg-stone-100 text-stone-700',
+    };
+  }
+  if (normalizeCondition(day?.condition) === 'storm' || (rainfall !== null && rainfall >= 20)) {
+    return {
+      label: language === 'tl' ? 'Babala sa ulan' : 'Rain alert',
+      className: 'bg-amber-100 text-amber-950',
+    };
+  }
+  if ((rainChance !== null && rainChance >= 60) || (rainfall !== null && rainfall >= 5)) {
+    return {
+      label: language === 'tl' ? 'Posibleng umulan' : 'Rain watch',
+      className: 'bg-sky-100 text-sky-950',
+    };
+  }
+  return {
+    label: language === 'tl' ? 'Mababang tsansa ng ulan' : 'Low rain chance',
+    className: 'bg-emerald-100 text-emerald-950',
+  };
+};
+
+const getForecastAdvice = (day, language, rainDetected) => {
+  if (rainDetected === true) {
+    return language === 'tl'
+      ? 'May aktuwal na ulan ayon sa sensor. Ipagpaliban ang pag-spray; kung gagamit ng pesticide, sundin ang rainfast interval sa label. Hindi ito awtomatikong rekomendasyon na mag-apply.'
+      : 'The rain sensor detects rain at the farm. Postpone spraying; if using a pesticide, follow its label rainfast interval. This is not a recommendation to apply.';
+  }
+
+  if (!day) {
+    return language === 'tl'
+      ? 'Walang sapat na datos para magbigay ng gabay sa gawain.'
+      : 'There is not enough forecast data to provide a work guide.';
+  }
+
+  const rainfall = metricOrNull(day.rainfall);
+  const rainChance = metricOrNull(day.rainChance);
+  const wind = metricOrNull(day.wind);
+  const high = metricOrNull(day.temperature?.max ?? day.high);
+
+  if ((rainfall !== null && rainfall >= 20) || normalizeCondition(day.condition) === 'storm') {
+    return language === 'tl'
+      ? 'May inaasahang malakas na ulan. Unahin ang drainage at ipagpaliban ang pag-spray at pag-aani habang masama ang panahon.'
+      : 'Heavy rain is expected. Prioritize drainage and postpone spraying and harvesting while conditions are severe.';
+  }
+  if ((rainChance !== null && rainChance >= 60) || (rainfall !== null && rainfall >= 5)) {
+    return language === 'tl'
+      ? 'Posible ang ulan. Suriin ang aktuwal na kondisyon at sundin ang rainfast interval sa label ng anumang pesticide; huwag mag-apply dahil lang sa forecast.'
+      : 'Rain is possible. Check actual conditions and follow any pesticide label rainfast interval; do not apply solely because of the forecast.';
+  }
+  if (wind !== null && wind >= 30) {
+    return language === 'tl'
+      ? 'Maaaring lumakas ang hangin. Ipagpaliban ang pag-spray at tiyaking maayos ang suporta ng mga batang puno.'
+      : 'Winds may be strong. Postpone spraying and check supports on young trees.';
+  }
+  if (high !== null && high >= 35) {
+    return language === 'tl'
+      ? 'Mataas ang inaasahang init. Magplano ng gawain sa mas malamig na oras at bantayan ang lupa at mga puno.'
+      : 'High temperatures are expected. Plan work during cooler hours and monitor soil and trees.';
+  }
+  return language === 'tl'
+    ? 'Walang matinding panganib sa forecast. Suriin pa rin ang kondisyon ng dahon at bunga bago magtrabaho.'
+    : 'No severe weather risk is shown. Still check leaves and fruit conditions before working.';
+};
+
+const getRainForecastStatus = (day) => {
+  if (!day) return null;
+  const rainfall = metricOrNull(day.rainfall);
+  const rainChance = metricOrNull(day.rainChance);
+  const condition = normalizeCondition(day.condition);
+  if (rainfall === null && rainChance === null && condition === 'unknown') return null;
+  return (rainChance !== null && rainChance >= 50)
+    || (rainfall !== null && rainfall >= 1)
+    || condition === 'rainy'
+    || condition === 'storm';
+};
+
+const getRainInterpretation = (rainDetected, rainExpected, language, hasRawSignal) => {
+  const actual = rainDetected === true
+    ? (language === 'tl' ? 'May aktuwal na ulan na nakita ng sensor sa bukid' : 'Rain is detected by the farm sensor')
+    : rainDetected === false
+      ? (language === 'tl' ? 'Walang ulan na nakita ng sensor sa bukid' : 'No rain is detected by the farm sensor')
+      : (language === 'tl'
+        ? (hasRawSignal ? 'Hindi pa matukoy ang raw sensor signal' : 'Walang mapatunayang status ng rain sensor')
+        : (hasRawSignal ? 'The raw sensor signal is not yet verified' : 'No verified rain-sensor status is available'));
+  const forecast = rainExpected === true
+    ? (language === 'tl' ? 'may ulan na inaasahan sa forecast ngayon' : 'rain is expected in today’s forecast')
+    : rainExpected === false
+      ? (language === 'tl' ? 'walang ulan na inaasahan sa forecast ngayon' : 'no rain is expected in today’s forecast')
+      : (language === 'tl' ? 'walang sapat na datos sa forecast ng ulan' : 'rain forecast data is unavailable');
+  return `${actual}; ${forecast}.`;
 };
 
 const formatImpact = (index, language) => {
@@ -257,17 +404,26 @@ export function WeatherAlerts({ isActive = true }) {
   const { language: lang } = useContext(LanguageContext);
 
   const { weatherData, error, loading, refresh } = useWeather(DEFAULT_WEATHER_QUERY, 7);
+  const {
+    snapshot: sensor,
+    loading: sensorLoading,
+    error: sensorError,
+  } = useSensorReadings(isActive);
   const forecast = useMemo(() => weatherData?.forecast || [], [weatherData]);
+  const todayDate = getManilaDate();
+  const todayForecast = forecast.find((day) => day.date === todayDate) || null;
   const [dismissedIds, setDismissedIds] = useState([]);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
 
   const generatedAlerts = useMemo(() => buildWeatherAlerts(forecast, lang), [forecast, lang]);
   const activeAlerts = generatedAlerts.filter((alert) => !dismissedIds.includes(alert.id));
   const inactiveAlerts = generatedAlerts.filter((alert) => dismissedIds.includes(alert.id));
   const currentWeather = weatherData?.current || {};
-  const currentTemp = Number(currentWeather.temp ?? 0);
-  const currentCondition = currentWeather.condition || (lang === 'tl' ? 'Maayos na panahon' : 'Clear weather');
-  const currentHumidity = Number(currentWeather.humidity ?? 0);
-  const currentWind = Number(currentWeather.wind ?? 0);
+  const currentCondition = currentWeather.condition || (
+    loading
+      ? (lang === 'tl' ? 'Kinukuha ang panahon...' : 'Loading current weather...')
+      : (lang === 'tl' ? 'Walang kasalukuyang datos' : 'Current weather unavailable')
+  );
 
   const getSeverityColor = (severity) => {
     switch (severity) {
@@ -306,369 +462,386 @@ export function WeatherAlerts({ isActive = true }) {
       lang === 'tl'
         ? 'Real-time na babala sa panahon at forecast para sa iyong bukid'
         : 'Real-time weather alerts and forecasts for your farm',
-    forecast: 'Forecast',
-    activeAlerts: 'Active Alerts',
-    rain: lang === 'tl' ? 'Ulan' : 'Rain',
-    wind: lang === 'tl' ? 'Hangin' : 'Wind',
-    alertHistory: 'History Alert',
-    weekAhead: lang === 'tl' ? 'Pagpaplano sa Susunod na Linggo' : 'Week Ahead Planning',
-    weekAheadDesc:
-      lang === 'tl' ? 'Mga inirerekomendang gawain batay sa totoong forecast' : 'Recommended activities based on live forecast data',
+    activeAlerts: lang === 'tl' ? 'Mga Aktibong Babala' : 'Active Alerts',
+    alertHistory: lang === 'tl' ? 'Kasaysayan ng Babala' : 'Alert History',
     noActiveAlerts: lang === 'tl' ? 'Walang aktibong babala sa panahon' : 'No active weather alerts',
-    allNormal: lang === 'tl' ? 'Lahat ng kondisyon ay normal' : 'All conditions are within normal parameters',
     noHistory: lang === 'tl' ? 'Walang kasaysayan ng babala' : 'No alert history',
-    dismissedHere: lang === 'tl' ? 'Dito lalabas ang mga na-dismiss na babala' : 'Dismissed alerts will appear here',
     dismiss: lang === 'tl' ? 'I-dismiss' : 'Dismiss',
     dismissed: lang === 'tl' ? 'Na-dismiss' : 'Dismissed',
-    alertDetails: lang === 'tl' ? 'Detalye ng Babala' : 'Alert Details',
-    recommendedActions: lang === 'tl' ? 'Mga Inirerekomendang Aksyon' : 'Recommended Actions',
     impactIn: lang === 'tl' ? 'Inaasahang epekto' : 'Impact expected',
-    critical: 'Critical',
-    highPriority: lang === 'tl' ? 'Mataas na Priyoridad' : 'High Priority',
-    moderate: lang === 'tl' ? 'Katamtaman' : 'Moderate',
     forecastUnavailable: lang === 'tl' ? 'Walang forecast data ngayon.' : 'No forecast data available right now.',
-    liveSource:
-      lang === 'tl'
-        ? 'Ang mga notification na ito ay galing sa kasalukuyang weather API data.'
-        : 'These notifications are generated from current weather API data.',
   };
 
-  const weekAheadNotes = useMemo(() => {
-    if (!forecast.length) return [];
-    return forecast.slice(0, 7).map((day, index) => {
-      const rainfall = Number(day.rainfall ?? 0);
-      const high = Number(day.temperature?.max ?? 0);
-      const wind = Number(day.wind ?? 0);
-      const label = getDayLabel(day.date, index, lang);
-
-      if (rainfall >= 20) {
-        return {
-          icon: <CloudRain className="h-6 w-6 text-blue-600" />,
-          className: 'bg-blue-50 border-blue-200 text-blue-900',
-          text:
-            lang === 'tl'
-              ? `${label}: May forecast na malakas na ulan na ${rainfall.toFixed(1)} mm. Unahin ang drainage at iwasan muna ang pag-spray.`
-              : `${label}: Heavy rainfall of ${rainfall.toFixed(1)} mm is forecast. Prioritize drainage and avoid spraying for now.`,
-        };
-      }
-
-      if (high >= 35) {
-        return {
-          icon: <Thermometer className="h-6 w-6 text-amber-600" />,
-
-          className: 'bg-amber-50 border-amber-200 text-amber-900',
-          text:
-            lang === 'tl'
-              ? `${label}: Mataas ang init na aabot sa ${high}°C. Bantayan ang lupa at kondisyon ng halaman.`
-              : `${label}: High heat may reach ${high}°C. Monitor soil and plant condition closely.`,
-        };
-      }
-
-      return {
-        icon: <Wind className="h-6 w-6 text-green-600" />,
-        className: 'bg-green-50 border-green-200 text-green-900',
-        text:
-          lang === 'tl'
-            ? `${label}: Mas maayos ang kondisyon ng panahon. Magandang araw ito para sa regular na farm inspection.`
-            : `${label}: Weather conditions look more stable. This is a good day for routine farm inspection.`,
-      };
-    });
-  }, [forecast, lang]);
-
-  // Presentation below follows the Figma weather layout. The existing weather API request
-  // and its response fields above remain the single source of truth for every value shown.
-  // Always begin with today, so Wednesday is shown first when today is Wednesday.
   const displayedForecast = forecast.slice(0, 7);
-  const rainfallFor = (day) => Number(day?.rainfall ?? 0);
-  const lowestRainDay = displayedForecast.reduce((lowest, day) => !lowest || rainfallFor(day) < rainfallFor(lowest) ? day : lowest, null);
-  const highestRainDay = displayedForecast.reduce((highest, day) => !highest || rainfallFor(day) > rainfallFor(highest) ? day : highest, null);
-  const todayRain = rainfallFor(displayedForecast[0]);
-  // Keep the UI's displayed rain chance within the requested 10%–80% range.
-  // The original API value remains unchanged for forecast logic and rainfall data.
-  const rawTodayRainChance = Number(displayedForecast[0]?.rainChance ?? 0);
-  const todayRainChance = Number.isFinite(rawTodayRainChance)
-    ? Math.round(Math.min(80, Math.max(10, rawTodayRainChance)))
-    : 10;
+  const selectedDay = displayedForecast[selectedDayIndex] || displayedForecast[0] || null;
+  const isTodaySelected = selectedDay?.date === todayDate;
+  const todayHourlyForecast = (weatherData?.hourly || []).filter(
+    (hour) => typeof hour.time === 'string' && hour.time.slice(0, 10) === todayDate,
+  );
+  const rainfallFor = (day) => metricOrNull(day?.rainfall);
+  const measuredRainForecast = displayedForecast.filter((day) => rainfallFor(day) !== null);
+  const lowestRainDay = measuredRainForecast.reduce((lowest, day) => !lowest || rainfallFor(day) < rainfallFor(lowest) ? day : lowest, null);
+  const highestRainDay = measuredRainForecast.reduce((highest, day) => !highest || rainfallFor(day) > rainfallFor(highest) ? day : highest, null);
+  const todayRain = metricOrNull(todayForecast?.precipitationSum ?? todayForecast?.rainSum);
+  const todayRainChance = metricOrNull(todayForecast?.rainChance);
+  const todayHigh = metricOrNull(todayForecast?.temperature?.max);
+  const todayLow = metricOrNull(todayForecast?.temperature?.min);
+  const todayRainExpected = getRainForecastStatus(todayForecast);
+  const selectedRainfall = metricOrNull(selectedDay?.rainfall);
+  const selectedRainChance = metricOrNull(selectedDay?.rainChance);
+  const selectedWind = metricOrNull(selectedDay?.wind);
+  const selectedAdvice = getForecastAdvice(selectedDay, lang, sensor.isRaining);
+  const selectedDayPosition = selectedDay ? displayedForecast.indexOf(selectedDay) : -1;
+  const sprayNeedsCaution = sensor.isRaining === true
+    || (selectedRainChance !== null && selectedRainChance >= 60)
+    || (selectedRainfall !== null && selectedRainfall >= 5)
+    || (selectedWind !== null && selectedWind >= 30);
+  const selectedSevereWeather = (selectedRainfall !== null && selectedRainfall >= 20)
+    || normalizeCondition(selectedDay?.condition) === 'storm';
+  const sprayTask = !selectedDay
+    ? (lang === 'tl' ? 'Walang forecast' : 'No forecast')
+    : sprayNeedsCaution
+      ? (lang === 'tl' ? 'Ipagpaliban' : 'Postpone')
+      : (lang === 'tl' ? 'Suriin muna ang kondisyon' : 'Check conditions first');
+  const waterTask = sensor.isRaining === true
+    ? (lang === 'tl' ? 'Suriin muna ang lupa' : 'Check soil first')
+    : selectedRainfall !== null && selectedRainfall >= 5
+      ? (lang === 'tl' ? 'Maaaring umulan' : 'Rain may help')
+    : (lang === 'tl' ? 'Suriin muna ang lupa' : 'Check soil first');
+  const harvestTask = selectedSevereWeather
+    ? (lang === 'tl' ? 'Iwasan habang maulan' : 'Avoid during severe weather')
+    : (lang === 'tl' ? 'Suriin ang bunga' : 'Check fruit readiness');
+  const locationName = weatherData?.resolved_location?.name
+    ? [weatherData.resolved_location.name, weatherData.resolved_location.region].filter(Boolean).join(', ')
+    : FIXED_LOCATION_LABEL;
+  const currentTemperature = metricOrNull(currentWeather.temp);
+  const currentHumidityValue = metricOrNull(currentWeather.humidity);
+  const currentWindValue = metricOrNull(currentWeather.wind);
+  const selectedDayName = selectedDay ? getDayLabel(selectedDay.date, selectedDay.dayIndex ?? selectedDayIndex, lang) : '';
   const forecastRangeLabel = displayedForecast.length
-    ? `${getDayLabel(displayedForecast[0]?.date, 0, lang)} hanggang ${getDayLabel(displayedForecast[displayedForecast.length - 1]?.date, displayedForecast.length - 1, lang)}`
+    ? `${getDayLabel(displayedForecast[0]?.date, 0, lang)} ${lang === 'tl' ? 'hanggang' : 'to'} ${getDayLabel(displayedForecast[displayedForecast.length - 1]?.date, displayedForecast.length - 1, lang)}`
     : '';
+  const actualRainLabel = sensor.isRaining === true
+    ? (lang === 'tl' ? 'May ulan na nakita' : 'Rain detected')
+    : sensor.isRaining === false
+      ? (lang === 'tl' ? 'Walang ulan na nakita' : 'No rain detected')
+      : sensorError
+        ? (lang === 'tl' ? 'Hindi available ang sensor' : 'Sensor unavailable')
+        : sensor.rainRaw !== null
+          ? (lang === 'tl' ? 'Hindi pa beripikado' : 'Unverified signal')
+          : sensorLoading
+            ? (lang === 'tl' ? 'Kinukuha ang reading' : 'Checking sensor')
+            : (lang === 'tl' ? 'Walang beripikadong status' : 'No verified status');
+  const forecastRainLabel = todayRainExpected === true
+    ? (lang === 'tl' ? 'Inaasahan ang ulan' : 'Rain expected')
+    : todayRainExpected === false
+      ? (lang === 'tl' ? 'Walang inaasahang ulan' : 'No rain expected')
+      : (lang === 'tl' ? 'Walang sapat na datos' : 'Insufficient forecast data');
+  const rainInterpretation = getRainInterpretation(
+    sensor.isRaining,
+    todayRainExpected,
+    lang,
+    sensor.rainRaw !== null,
+  );
 
   return (
-    <section className="mx-auto w-full max-w-4xl">
-      <div className="mb-3 sm:mb-5">
-        <h2 className="text-xl font-black text-slate-800 sm:text-2xl">{lang === 'tl' ? 'Panahon' : 'Weather'}</h2>
-        <p className="mt-1 text-xs text-slate-400 sm:text-sm">{forecastRangeLabel ? (lang === 'tl' ? `Pagtataya ng panahon: ${forecastRangeLabel}` : `Weather forecast: ${forecastRangeLabel}`) : (lang === 'tl' ? 'Pagtataya ng panahon para sa susunod na 7 araw' : 'Weather forecast for the next 7 days')}</p>
+    <section className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5" aria-labelledby="weather-page-title">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="weather-page-title" className="text-2xl font-extrabold tracking-tight text-[#1C1917] sm:text-3xl" style={{ fontFamily: "'Nunito', sans-serif" }}>{L.title}</h2>
+          <p className="mt-1 text-sm text-[#57534E]">{forecastRangeLabel
+            ? `${lang === 'tl' ? 'Pagtataya para sa' : 'Forecast for'} ${forecastRangeLabel}`
+            : L.description}</p>
+        </div>
+        <WeatherRefreshStatus loading={loading} refresh={refresh} language={lang} />
       </div>
 
-      {error ? (
-        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 sm:p-6 sm:text-sm">{error}</div>
-      ) : displayedForecast.length === 0 ? (
-        <div className="rounded-3xl border border-slate-100 bg-white p-4 text-xs text-slate-500 shadow-sm sm:p-6 sm:text-sm">{L.forecastUnavailable}</div>
-      ) : (
-        <>
-          <div className="rounded-3xl border border-slate-50 bg-white p-2 shadow-[0_2px_5px_rgba(15,23,42,.08)] sm:p-4 md:p-6">
-            <div className="weather-seven-day-grid grid gap-1 sm:gap-2">
-              {displayedForecast.map((day, index) => {
-                const high = Number(day.temperature?.max ?? day.high ?? 0);
-                const low = Number(day.temperature?.min ?? day.low ?? 0);
-                return <article key={day.date || index} className={`flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1.5 py-3 text-center transition sm:px-2 sm:py-4 ${index === 0 ? 'bg-[#0d3d2b]' : 'hover:bg-slate-50'}`}>
-                  <p className={`text-xs font-bold ${index === 0 ? 'text-emerald-300' : 'text-slate-400'}`}>{getShortDayLabel(day.date, index, lang)}</p>
-                  <div className="h-10 w-10 sm:h-12 sm:w-12"><Forecast3DIcon condition={day.condition} /></div>
-                  <p className={`font-black text-base sm:text-lg ${index === 0 ? 'text-white' : 'text-slate-800'}`}>{high.toFixed(0)}°</p>
-                  <p className={`text-xs font-medium ${index === 0 ? 'text-white/50' : 'text-slate-400'}`}>{low.toFixed(0)}°</p>
-                  {index === 0 && <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-300">{lang === 'tl' ? 'Ngayon' : 'Today'}</span>}
-                </article>;
-              })}
+      {error && (
+        <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          {error}
+        </div>
+      )}
+      <section className="grid items-stretch gap-4 lg:grid-cols-12 sm:gap-5" aria-label={lang === 'tl' ? 'Panahon at gabay sa bukid' : 'Farm weather and guide'}>
+        <article className="flex flex-col justify-between space-y-5 rounded-3xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-7">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#14532D]">{locationName} · {lang === 'tl' ? 'Ngayon' : 'Today'}</span>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${sensor.isRaining === true ? 'bg-sky-100 text-sky-900' : sensor.isRaining === false ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-950'}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${sensor.isRaining === true ? 'bg-sky-600' : sensor.isRaining === false ? 'bg-emerald-600' : 'bg-amber-600'}`} aria-hidden="true" />
+                  {actualRainLabel}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-[#57534E]">
+                {lang === 'tl' ? 'Huling update ng sensor' : 'Last sensor update'}: {sensor.receivedAt ? new Date(sensor.receivedAt).toLocaleString(lang === 'tl' ? 'fil-PH' : 'en-PH') : '—'}
+              </p>
+              {sensorError && <p role="status" className="mt-1 text-xs text-amber-900">{lang === 'tl' ? 'Hindi makuha ang pinakabagong sensor reading.' : 'The latest sensor reading could not be retrieved.'}</p>}
+
+              <section className="mt-3" aria-labelledby="weather-current-title">
+                <h3 id="weather-current-title" className="text-xs font-extrabold uppercase tracking-wider text-[#1C1917]">{lang === 'tl' ? 'Kasalukuyang Kondisyon' : 'Current Conditions'}</h3>
+                <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="font-extrabold tracking-tight text-4xl text-[#1C1917] sm:text-5xl" style={{ fontFamily: "'Nunito', sans-serif" }}>
+                    {currentTemperature === null ? '—' : `${Math.round(currentTemperature)}°C`}
+                  </span>
+                  <span className="font-bold text-sm text-sky-800">{currentCondition}</span>
+                </div>
+                <p className="mt-1 text-xs text-[#57534E]">
+                  {lang === 'tl' ? 'Weather code' : 'WMO weather code'}: {currentWeather.weatherCode ?? (lang === 'tl' ? 'Hindi available' : 'Unavailable')}
+                </p>
+              </section>
+            </div>
+            <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-stone-200 ${getWeatherBackground(currentCondition)} ${getWeatherIconColor(currentCondition)}`}>
+              <WeatherIcon condition={currentCondition} code={currentWeather.weatherCode} className="h-9 w-9" />
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="rounded-2xl border border-stone-200 bg-[#FAF9F5] p-3">
+              <span className="block text-[11px] font-bold uppercase text-[#57534E]">{lang === 'tl' ? 'Hangin' : 'Wind'}</span>
+              <span className="mt-0.5 block font-extrabold text-base text-[#1C1917] sm:text-lg">{currentWindValue === null ? '—' : `${currentWindValue} km/h`}</span>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-[#FAF9F5] p-3">
+              <span className="block text-[11px] font-bold uppercase text-[#57534E]">{lang === 'tl' ? 'Halumigmig' : 'Air Moisture'}</span>
+              <span className="mt-0.5 block font-extrabold text-base text-[#1C1917] sm:text-lg">{currentHumidityValue === null ? '—' : `${currentHumidityValue}%`}</span>
             </div>
           </div>
 
-          <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <article className="flex flex-col items-start gap-2 rounded-2xl border border-slate-50 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-3 sm:p-4"><div className="h-9 w-9 shrink-0 sm:h-10 sm:w-10"><RainCloud3D isRaining={todayRain > 0} /></div><div className="min-w-0"><p className="text-xs font-semibold text-slate-400">{lang === 'tl' ? 'Tsansa ng ulan' : 'Rain chance'}</p><p className="font-black text-slate-800">{todayRainChance}%</p><p className="text-xs text-slate-400">{lang === 'tl' ? 'Susunod na 24 oras' : 'Next 24h'}</p></div></article>
-            <article className="flex flex-col items-start gap-2 rounded-2xl border border-slate-50 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-3 sm:p-4"><div className="h-9 w-9 shrink-0 sm:h-10 sm:w-10"><Forecast3DIcon condition={lowestRainDay?.condition} /></div><div className="min-w-0"><p className="text-xs font-semibold text-slate-400">{lang === 'tl' ? 'Araw na mas kaunti ang ulan' : 'Day with less rain'}</p><p className="font-black text-slate-800">{getDayLabel(lowestRainDay?.date, displayedForecast.indexOf(lowestRainDay), lang)}</p><p className="text-xs text-slate-400 truncate">{lowestRainDay?.condition || '—'}</p></div></article>
-            <article className="flex flex-col items-start gap-2 rounded-2xl border border-slate-50 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-3 sm:p-4"><div className="h-9 w-9 shrink-0 sm:h-10 sm:w-10"><RainCloud3D isRaining={rainfallFor(highestRainDay) > 0} /></div><div className="min-w-0"><p className="text-xs font-semibold text-slate-400">{lang === 'tl' ? 'Araw na may pinakamalakas na ulan' : 'Day with the most rain'}</p><p className="font-black text-slate-800">{getDayLabel(highestRainDay?.date, displayedForecast.indexOf(highestRainDay), lang)}</p><p className="text-xs text-slate-400 truncate">{highestRainDay ? `${lang === 'tl' ? 'Dami ng ulan' : 'Rainfall'}: ${rainfallFor(highestRainDay).toFixed(1)} mm` : '—'}</p></div></article>
+          <section className="space-y-3 border-t border-stone-200 pt-4" aria-labelledby="weather-today-title">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 id="weather-today-title" className="font-extrabold text-sm uppercase tracking-wider text-[#1C1917]">{lang === 'tl' ? 'Panahon Ngayon' : "Today's Weather"}</h3>
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${todayRainExpected === true ? 'bg-sky-100 text-sky-900' : todayRainExpected === false ? 'bg-emerald-100 text-emerald-900' : 'bg-stone-100 text-stone-700'}`}>
+                {forecastRainLabel}
+              </span>
+            </div>
+            {loading && !todayForecast ? (
+              <p role="status" className="text-sm text-[#57534E]">{lang === 'tl' ? 'Kinukuha ang forecast ngayong araw...' : "Loading today's full-day forecast..."}</p>
+            ) : !todayForecast ? (
+              <p role="status" className="text-sm text-[#57534E]">{lang === 'tl' ? 'Hindi available ang forecast ngayong araw.' : "Today's forecast is unavailable."}</p>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-stone-200 ${getWeatherBackground(todayForecast.condition)} ${getWeatherIconColor(todayForecast.condition)}`}>
+                    <WeatherIcon condition={todayForecast.condition} code={todayForecast.weatherCode} className="h-8 w-8" />
+                  </span>
+                  <div>
+                    <p className="font-bold text-[#1C1917]">{todayForecast.condition || (lang === 'tl' ? 'Hindi available' : 'Unavailable')}</p>
+                    <p className="text-xs text-[#57534E]">
+                      {lang === 'tl' ? 'Mababa / Mataas' : 'Low / High'}: {todayLow === null ? '—' : `${Math.round(todayLow)}°`} / {todayHigh === null ? '—' : `${Math.round(todayHigh)}°`}C
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-stone-200 bg-[#FAF9F5] p-3">
+                    <span className="block text-[10px] font-bold uppercase text-[#57534E]">{lang === 'tl' ? 'Pinakamataas na tsansa ng ulan' : 'Max precipitation probability'}</span>
+                    <span className="mt-0.5 block font-extrabold text-base text-[#1C1917]">{todayRainChance === null ? '—' : `${todayRainChance}%`}</span>
+                  </div>
+                  <div className="rounded-2xl border border-stone-200 bg-[#FAF9F5] p-3">
+                    <span className="block text-[10px] font-bold uppercase text-[#57534E]">{lang === 'tl' ? 'Inaasahang ulan' : 'Expected rain'}</span>
+                    <span className="mt-0.5 block font-extrabold text-base text-[#1C1917]">{todayRain === null ? '—' : `${todayRain.toFixed(1)} mm`}</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+
+          <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-medium leading-relaxed text-emerald-950">
+            {rainInterpretation}
+          </p>
+
+          {isTodaySelected && todayHourlyForecast.length > 0 && (
+            <section role="region" className="border-t border-stone-200 pt-4" aria-labelledby="weather-hourly-title">
+              <div className="mb-2.5 flex items-center justify-between gap-2">
+                <h3 id="weather-hourly-title" className="text-xs font-extrabold uppercase tracking-wider text-[#1C1917]">
+                  {lang === 'tl' ? 'Susunod na Oras Ngayon' : 'Next Hours Today'}
+                </h3>
+              </div>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+                {todayHourlyForecast.map((hour, index) => {
+                  const rainChance = metricOrNull(hour.rainChance);
+                  const temperature = metricOrNull(hour.temperature);
+                  return (
+                    <article key={hour.time || index} className="space-y-1 rounded-2xl border border-stone-200 bg-[#FAF9F5] p-2.5 text-center">
+                      <span className="block text-[11px] font-bold text-[#57534E]">{formatForecastTime(hour.time, lang) || hour.label || '—'}</span>
+                      <span className="mx-auto block h-7 w-7 text-sky-800"><WeatherIcon condition={hour.condition} code={hour.weatherCode} /></span>
+                      <span className="block font-extrabold text-sm text-[#1C1917]">{temperature === null ? '—' : `${Math.round(temperature)}°`}</span>
+                      <span className="block text-[11px] font-bold text-sky-700">{rainChance === null ? '—' : `${rainChance}%`}</span>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+        </article>
+
+        <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-5" aria-labelledby="weather-work-guide-title">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 id="weather-work-guide-title" className="font-extrabold text-lg text-[#1C1917]" style={{ fontFamily: "'Nunito', sans-serif" }}>{lang === 'tl' ? 'Gabay sa Gawain sa Bukid' : 'Orchard Work Guide'}</h3>
+              <span className="rounded-xl bg-emerald-100 px-2.5 py-1 text-xs font-extrabold text-[#14532D]">{selectedDayName}{isTodaySelected ? ` · ${lang === 'tl' ? 'Ngayon' : 'Today'}` : ''}</span>
+            </div>
+            <p className="mt-1 text-xs text-[#57534E]">{lang === 'tl' ? 'Simpleng gabay batay sa panahon sa napiling araw.' : "Simple farm advice based on the selected day's weather."}</p>
+            <div className="mt-4 space-y-2.5">
+              {[
+                {
+                  label: lang === 'tl' ? 'Pag-spray ng dahon' : 'Leaf Spraying',
+                  note: sprayNeedsCaution ? selectedAdvice : (lang === 'tl' ? 'Suriin muna ang panahon bago mag-spray.' : 'Check the weather before spraying.'),
+                  badge: sprayTask,
+                  caution: sprayNeedsCaution,
+                },
+                {
+                  label: lang === 'tl' ? 'Pagdidilig ng puno' : 'Tree Watering',
+                  note: selectedRainfall !== null && selectedRainfall >= 5
+                    ? (lang === 'tl' ? 'Maaaring mapanatiling basa ng ulan ang lupa; suriin muna ito.' : 'Rain may keep the soil moist; check it before watering.')
+                    : (lang === 'tl' ? 'Suriin ang halumigmig ng lupa bago magdilig.' : 'Check soil moisture before watering.'),
+                  badge: waterTask,
+                  caution: false,
+                },
+                {
+                  label: lang === 'tl' ? 'Pag-aani ng bunga' : 'Fruit Harvesting',
+                  note: selectedSevereWeather
+                    ? (lang === 'tl' ? 'Suriin ang panahon bago mag-ani.' : 'Check weather conditions before harvesting.')
+                    : (lang === 'tl' ? 'Suriin kung handa na ang bunga.' : 'Check fruit readiness before harvesting.'),
+                  badge: harvestTask,
+                  caution: selectedSevereWeather,
+                },
+              ].map((task) => (
+                <div key={task.label} className="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-[#FAF9F5] p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[#1C1917]">{task.label}</p>
+                    <p className="mt-0.5 text-xs text-[#57534E]">{task.note}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-bold ${task.caution ? 'bg-amber-100 text-amber-950' : 'bg-emerald-100 text-emerald-950'}`}>{task.badge}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 rounded-xl bg-stone-100 p-3 text-[11px] leading-relaxed text-[#57534E]">{lang === 'tl' ? 'Suriin ang aktuwal na panahon at halumigmig ng lupa. Sundin ang label at rainfast interval ng pesticide.' : 'Check actual sky conditions and soil moisture. Follow the pesticide label and rainfast interval.'}</p>
+        </section>
+      </section>
+
+      <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-4 sm:p-6" aria-labelledby="weather-7day-title">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 id="weather-7day-title" className="font-extrabold text-lg text-[#1C1917]" style={{ fontFamily: "'Nunito', sans-serif" }}>{lang === 'tl' ? 'Taya ng Panahon sa Susunod na 7 Araw' : '7-Day Weather Forecast'}</h3>
+            <p className="mt-1 text-xs text-[#57534E]">{lang === 'tl' ? 'Pumili ng araw para makita ang detalye at gabay sa gawain.' : 'Select a day to see its forecast details and work guide.'}</p>
           </div>
-        </>
-      )}
+          <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+            {lowestRainDay && (
+              <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[#14532D]">
+                {lang === 'tl' ? 'Pinakamababang ulan' : 'Driest day'}: {getDayLabel(lowestRainDay.date, displayedForecast.indexOf(lowestRainDay), lang)} · {rainfallFor(lowestRainDay).toFixed(1)} mm
+              </span>
+            )}
+            {highestRainDay && (
+              <span className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-950">
+                {lang === 'tl' ? 'Pinakamaraming ulan' : 'Heaviest rain'}: {getDayLabel(highestRainDay.date, displayedForecast.indexOf(highestRainDay), lang)} · {rainfallFor(highestRainDay).toFixed(1)} mm
+              </span>
+            )}
+            {weatherData?.forecast_complete === false && (
+              <span role="status" className="rounded-xl bg-amber-100 px-3 py-1.5 text-amber-950">{lang === 'tl' ? 'Hindi kumpleto ang forecast' : 'Forecast incomplete'}</span>
+            )}
+          </div>
+        </div>
+
+        {displayedForecast.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-stone-300 bg-[#FAF9F5] p-6 text-center text-sm text-[#57534E]">
+            {loading ? (lang === 'tl' ? 'Kinukuha ang forecast...' : 'Loading forecast...') : L.forecastUnavailable}
+          </div>
+        ) : (
+          <>
+            <div className="weather-seven-day-grid grid gap-2">
+              {displayedForecast.map((day, index) => {
+                const isToday = day.date === todayDate;
+                const isSelected = index === selectedDayPosition;
+                const high = metricOrNull(day.temperature?.max ?? day.high);
+                const low = metricOrNull(day.temperature?.min ?? day.low);
+                const rainChance = metricOrNull(day.rainChance);
+                const badge = getForecastBadge(day, lang);
+                return (
+                  <button
+                    type="button"
+                    key={day.date || index}
+                    onClick={() => setSelectedDayIndex(index)}
+                    aria-pressed={isSelected}
+                    aria-label={`${getDayLabel(day.date, index, lang)}${day.condition ? `, ${day.condition}` : ''}, ${high === null ? '—' : `${high}°`}/${low === null ? '—' : `${low}°`}, ${rainChance === null ? (lang === 'tl' ? 'walang datos ng tsansa ng ulan' : 'rain chance unavailable') : `${rainChance}% ${lang === 'tl' ? 'tsansa ng ulan' : 'rain chance'}`}`}
+                    className={`flex min-w-0 flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14532D] sm:p-3 ${
+                      isSelected
+                        ? 'border-2 border-[#14532D] bg-[#14532D] text-white shadow-sm'
+                        : 'border-stone-200 bg-[#FAF9F5] text-[#1C1917] hover:border-emerald-700'
+                    }`}
+                  >
+                    {isToday && <span className="rounded-full bg-emerald-300 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-emerald-950">{lang === 'tl' ? 'Ngayon' : 'Today'}</span>}
+                    <span className={`text-xs font-extrabold ${isSelected ? 'text-white' : 'text-[#1C1917]'}`}>{getShortDayLabel(day.date, index, lang)}</span>
+                    <span className={`text-[11px] font-medium ${isSelected ? 'text-emerald-200' : 'text-[#57534E]'}`}>{getDateLabel(day.date, index, lang)}</span>
+                    <span className={`h-9 w-9 ${isSelected ? 'text-emerald-100' : 'text-sky-800'}`}><WeatherIcon condition={day.condition} code={day.weatherCode} /></span>
+                    <span className="font-extrabold text-sm">{high === null ? '—' : `${Math.round(high)}°`} <span className={`text-xs font-semibold ${isSelected ? 'text-emerald-200' : 'text-[#57534E]'}`}>/ {low === null ? '—' : `${Math.round(low)}°`}</span></span>
+                    <span className={`text-[10px] font-bold ${isSelected ? 'text-emerald-200' : 'text-sky-800'}`}>{rainChance === null ? '—' : `${lang === 'tl' ? 'Ulan' : 'Rain'}: ${rainChance}%`}</span>
+                    <span className={`w-full truncate rounded-lg px-1.5 py-1 text-[9px] font-bold ${isSelected ? 'bg-white/20 text-white' : badge.className}`}>{badge.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col justify-between gap-3 rounded-2xl border border-stone-200 bg-[#FAF9F5] p-4 sm:flex-row sm:items-center">
+              <div className="min-w-0">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#14532D]">
+                  {selectedDayName}{isTodaySelected ? ` · ${lang === 'tl' ? 'Ngayon' : 'Today'}` : ''}
+                </span>
+                <p className="mt-1 text-sm font-semibold leading-relaxed text-[#1C1917]">{selectedDay?.condition || (lang === 'tl' ? 'Hindi available ang kondisyon.' : 'Condition unavailable.')}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[#57534E]">{selectedAdvice}</p>
+              </div>
+              <div className="grid shrink-0 grid-cols-2 gap-2 text-xs font-bold sm:grid-cols-3">
+                <span className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-[#1C1917]">{lang === 'tl' ? 'Tsansa ng ulan' : 'Rain chance'}: {selectedRainChance === null ? '—' : `${selectedRainChance}%`}</span>
+                <span className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-[#1C1917]">{lang === 'tl' ? 'Kabuuang ulan' : 'Total rain'}: {selectedRainfall === null ? '—' : `${selectedRainfall.toFixed(1)} mm`}</span>
+                <span className="col-span-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-[#1C1917] sm:col-span-1">{lang === 'tl' ? 'Hangin' : 'Wind'}: {selectedWind === null ? '—' : `${selectedWind} km/h`}</span>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-stone-200 bg-white p-4 sm:p-6" aria-label={lang === 'tl' ? 'Mga babala sa panahon' : 'Weather alerts'}>
+      <Tabs defaultValue="active" className="space-y-4">
+        <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl border border-stone-200 bg-[#FAF9F5] p-1">
+          <TabsTrigger value="active" className="min-h-10 rounded-xl text-sm data-[state=active]:bg-[#14532D] data-[state=active]:text-white">{L.activeAlerts} ({activeAlerts.length})</TabsTrigger>
+          <TabsTrigger value="history" className="min-h-10 rounded-xl text-sm data-[state=active]:bg-[#14532D] data-[state=active]:text-white">{L.alertHistory} ({inactiveAlerts.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="active" className="space-y-3">
+          {activeAlerts.length === 0 ? (
+            <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-[#14532D]" aria-hidden="true" />
+              <p className="text-sm font-semibold text-[#1C1917]">{L.noActiveAlerts}</p>
+            </div>
+          ) : activeAlerts.map((alert) => (
+            <article key={alert.id} className="rounded-2xl border border-stone-200 bg-white p-4">
+              <div className="flex items-start gap-3">
+                <span className={`rounded-xl p-2 ${alert.severity === 'critical' || alert.severity === 'high' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>{getSeverityIcon(alert.type)}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-bold text-[#1C1917]">{alert.title}</h3>
+                    <Badge variant={getSeverityColor(alert.severity)}>{alert.severity.toUpperCase()}</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-[#57534E]">{L.impactIn}: {alert.timeToImpact}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-[#1C1917]">{alert.description}</p>
+                  <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-[#57534E]">{alert.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>)}</ul>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => dismissAlert(alert.id)}>{L.dismiss}</Button>
+              </div>
+            </article>
+          ))}
+        </TabsContent>
+        <TabsContent value="history" className="space-y-3">
+          {inactiveAlerts.length === 0
+            ? <p className="rounded-2xl border border-stone-200 bg-white p-5 text-center text-sm text-[#57534E]">{L.noHistory}</p>
+            : inactiveAlerts.map((alert) => (
+              <article key={alert.id} className="rounded-2xl border border-stone-200 bg-white p-4 opacity-75">
+                <h3 className="font-bold text-[#1C1917]">{alert.title} · {L.dismissed}</h3>
+                <p className="mt-1 text-sm text-[#57534E]">{alert.description}</p>
+              </article>
+            ))}
+        </TabsContent>
+      </Tabs>
+      </section>
     </section>
   );
 
-  return (
-    <div className="space-y-4 text-base sm:space-y-6 sm:text-lg">
-      <Card className="border-none bg-gradient-to-r from-orange-600 via-red-500 to-pink-500 text-white shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-lg text-white sm:text-xl md:text-2xl">{L.title}</CardTitle>
-          <CardDescription className="text-xs leading-5 text-orange-100 sm:text-base sm:leading-6">{L.description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <div className="space-y-1">
-              <p className="text-base leading-6 text-orange-100 sm:text-lg">{L.activeAlerts}</p>
-              <p className="text-3xl font-bold text-white">{activeAlerts.length}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-base leading-6 text-orange-100 sm:text-lg">{L.critical}</p>
-              <p className="text-3xl font-bold text-white">{activeAlerts.filter((a) => a.severity === 'critical').length}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-base leading-6 text-orange-100 sm:text-lg">{L.highPriority}</p>
-              <p className="text-3xl font-bold text-white">{activeAlerts.filter((a) => a.severity === 'high').length}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-base leading-6 text-orange-100 sm:text-lg">{L.moderate}</p>
-              <p className="text-3xl font-bold text-white">{activeAlerts.filter((a) => a.severity === 'moderate').length}</p>
-            </div>
-          </div>
-          <div className="mt-4 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-100">{lang === 'tl' ? 'Kasalukuyang panahon' : 'Current weather'}</p>
-                <p className="mt-2 text-4xl font-black text-white sm:text-5xl">{currentTemp}°C</p>
-                <p className="text-sm text-orange-100 sm:text-base">{currentCondition}</p>
-              </div>
-              <div className="text-right text-xs text-orange-100 sm:text-sm">
-                <p className="font-semibold text-white">{FIXED_LOCATION_LABEL}</p>
-                <p>{lang === 'tl' ? `Humidity ${currentHumidity}%` : `Humidity ${currentHumidity}%`}</p>
-                <p>{lang === 'tl' ? `Hangin ${currentWind} km/h` : `Wind ${currentWind} km/h`}</p>
-              </div>
-            </div>
-          </div>
-          <p className="mt-4 text-base leading-7 text-orange-100">{L.liveSource}</p>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="forecast" className="space-y-6">
-          <TabsList className="inline-flex h-auto w-full min-w-0 snap-x snap-mandatory gap-1 overflow-x-auto overscroll-x-contain border-2 border-gray-100 bg-white shadow-md scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [-webkit-overflow-scrolling:touch] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden">
-            <TabsTrigger value="forecast" className="snap-start shrink-0 whitespace-nowrap px-3 py-2 text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-500 data-[state=active]:text-white sm:px-6 sm:text-lg">
-              <span>{L.forecast}</span>
-            </TabsTrigger>
-            <TabsTrigger value="active" className="snap-start shrink-0 whitespace-nowrap px-3 py-2 text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-500 data-[state=active]:text-white sm:px-6 sm:text-lg">
-              <span>{L.activeAlerts}</span>
-            </TabsTrigger>
-            <TabsTrigger value="history" className="snap-start shrink-0 whitespace-nowrap px-3 py-2 text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-500 data-[state=active]:text-white sm:px-6 sm:text-lg">
-              <span>{L.alertHistory}</span>
-            </TabsTrigger>
-          </TabsList>
-
-        <TabsContent value="forecast" className="space-y-4">
-          {error ? (
-            <Card className="border-2 border-amber-200 bg-amber-50 shadow-xl">
-              <CardContent className="py-8 text-base text-amber-900">{error}</CardContent>
-            </Card>
-          ) : forecast.length === 0 ? (
-            <Card className="border-2 border-gray-100 bg-white/90 shadow-xl">
-              <CardContent className="py-8 text-base text-gray-600">{L.forecastUnavailable}</CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-                {forecast.map((day, index) => (
-                  <Card
-                    key={day.date || index}
-                    className="mx-auto w-full max-w-sm border-2 border-gray-100 bg-white/90 shadow-xl transition-all duration-300 hover:shadow-2xl"
-                  >
-                    <CardHeader className="pb-3 text-center">
-                      <CardTitle className="min-h-[56px] text-center text-lg leading-tight sm:text-xl">
-                        {getDayLabel(day.date, index, lang)}
-                      </CardTitle>
-                      <CardDescription className="text-center text-base">{day.condition}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4 text-center">
-                      <div className={`flex items-center justify-center rounded-2xl p-6 shadow-md ${getWeatherBackground(day.condition)}`}>
-                        <div className={getWeatherIconColor(day.condition)}>{getWeatherIcon(day.condition)}</div>
-                      </div>
-
-                      <div className="text-center">
-                        <div className="flex items-baseline justify-center gap-1">
-                          <span className="text-4xl font-bold text-gray-900">{day.temperature?.max}°</span>
-                          <span className="text-2xl text-gray-500">/ {day.temperature?.min}°</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 border-t-2 border-gray-100 pt-2 text-left">
-                        <div className="flex items-center gap-2">
-                          <Droplets className="h-4 w-4 text-blue-500" />
-                          <span className="text-base text-gray-600">{L.rain}</span>
-                          <span className="ml-auto text-base font-semibold text-gray-900">{day.rainfall}mm</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Wind className="h-4 w-4 text-purple-500" />
-                          <span className="text-base text-gray-600">{L.wind}</span>
-                          <span className="ml-auto text-base font-semibold text-gray-900">{day.wind}km/h</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <Card className="border-2 border-gray-100 bg-white/90 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-2xl">{L.weekAhead}</CardTitle>
-                  <CardDescription className="text-base">{L.weekAheadDesc}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {weekAheadNotes.map((note, index) => (
-                      <div key={index} className={`flex items-start gap-3 rounded-lg border-2 p-4 shadow-md ${note.className}`}>
-                        {note.icon}
-                        <div className="flex-1">
-                          <p className="text-base">{note.text}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="active" className="space-y-4">
-          {activeAlerts.length === 0 ? (
-            <Card className="border-2 border-gray-100 bg-white/90 shadow-xl">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <CheckCircle2 className="mb-3 h-16 w-16 text-green-500" />
-                <p className="text-xl font-semibold text-gray-900">{L.noActiveAlerts}</p>
-                <p className="text-base text-gray-600">{L.allNormal}</p>
-              </CardContent>
-            </Card>
-          ) : (
-            activeAlerts.map((alert) => (
-              <Card
-                key={alert.id}
-                className="border-l-4 bg-white/90 shadow-xl"
-                style={{ borderLeftColor: alert.severity === 'critical' || alert.severity === 'high' ? '#ef4444' : '#f59e0b' }}
-              >
-                <CardHeader className="p-4 sm:p-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex min-w-0 flex-1 items-start gap-3">
-                      <div
-                        className={`rounded-lg p-2.5 shadow-md sm:p-3 ${
-                          alert.severity === 'critical' || alert.severity === 'high'
-                            ? 'bg-red-100 text-red-600'
-                            : 'bg-amber-100 text-amber-600'
-                        }`}
-                      >
-                        {getSeverityIcon(alert.type)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <CardTitle className="break-words text-lg leading-tight sm:text-xl">{alert.title}</CardTitle>
-                          <Badge variant={getSeverityColor(alert.severity)} className="text-xs sm:text-sm">
-                            {alert.severity.toUpperCase()}
-                          </Badge>
-                        </div>
-                        <CardDescription className="flex flex-wrap items-center gap-2 break-words text-sm sm:text-base">
-                          <Clock className="h-4 w-4" />
-                          {L.impactIn}: {alert.timeToImpact}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => dismissAlert(alert.id)} className="w-full text-sm sm:w-auto sm:text-base">
-                      {L.dismiss}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
-                  <Alert className="border-2 shadow-md">
-                    <AlertTriangle className="h-5 w-5" />
-                    <AlertTitle className="text-lg">{L.alertDetails}</AlertTitle>
-                    <AlertDescription className="text-sm leading-6 sm:text-base">{alert.description}</AlertDescription>
-                  </Alert>
-
-                  <div>
-                    <h4 className="mb-2 text-sm font-semibold text-gray-700 sm:text-base">{L.recommendedActions}:</h4>
-                    <ul className="space-y-2">
-                      {alert.recommendations.map((rec, index) => (
-                        <li key={index} className="flex items-start gap-2 text-sm leading-6 text-gray-700 sm:text-base">
-                          <div className="mt-2 h-2 w-2 rounded-full bg-green-500" />
-                          <span>{rec}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </TabsContent>
-
-        <TabsContent value="history" className="space-y-4">
-          {inactiveAlerts.length === 0 ? (
-            <Card className="border-2 border-gray-100 bg-white/90 shadow-xl">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <XCircle className="mb-3 h-16 w-16 text-gray-400" />
-                <p className="text-xl font-semibold text-gray-900">{L.noHistory}</p>
-                <p className="text-base text-gray-600">{L.dismissedHere}</p>
-              </CardContent>
-            </Card>
-          ) : (
-            inactiveAlerts.map((alert) => (
-              <Card key={alert.id} className="border-2 border-gray-100 bg-white/80 shadow-lg opacity-75">
-                <CardHeader className="p-4 sm:p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-lg bg-gray-100 p-2.5 text-gray-600 shadow-md sm:p-3">{getSeverityIcon(alert.type)}</div>
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                        <CardTitle className="break-words text-lg leading-tight sm:text-xl">{alert.title}</CardTitle>
-                        <Badge variant="outline" className="text-xs sm:text-sm">
-                          {L.dismissed}
-                        </Badge>
-                      </div>
-                      <CardDescription className="break-words text-sm leading-5 sm:text-base">{alert.timestamp.toLocaleString()}</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
-                  <p className="text-sm leading-6 text-gray-600 sm:text-base">{alert.description}</p>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
 }
 
 export default WeatherAlerts;

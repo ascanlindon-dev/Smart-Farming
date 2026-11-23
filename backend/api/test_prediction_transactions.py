@@ -1,7 +1,11 @@
 from datetime import timedelta
+from tempfile import TemporaryDirectory
 
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.test import TestCase
+from django.test.utils import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -32,7 +36,8 @@ class PredictionTransactionsTests(TestCase):
         response = self.client.get(self.endpoint)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {
-            'count': 0, 'leaf_count': 0, 'fruit_count': 0,
+            'count': 0, 'total_count': 0, 'leaf_count': 0, 'fruit_count': 0,
+            'ripe_count': 0, 'unripe_count': 0, 'assessed_count': 0,
             'page': 1, 'page_size': 20, 'total_pages': 1, 'results': [],
         })
         self.assertEqual(response['Cache-Control'], 'no-store')
@@ -70,10 +75,42 @@ class PredictionTransactionsTests(TestCase):
         )
         self.assertEqual(data['results'][0], {
             'id': fruit.pk, 'prediction_type': 'rambutan', 'label': 'mature',
-            'image_name': 'fruit.png', 'created_at': fruit.created_at.isoformat(),
+            'confidence': .95, 'image_name': 'fruit.png', 'image_url': None,
+            'created_at': fruit.created_at.isoformat(),
         })
         self.assertEqual(data['results'][-1]['created_at'], old_time.isoformat())
         self.assertEqual(data['results'][-1]['image_name'], '')
+
+    def test_maturity_distribution_counts_only_saved_binary_assessments(self):
+        self.scan(prediction_type='rambutan', label='mature')
+        self.scan(prediction_type='rambutan', label='ripe')
+        self.scan(prediction_type='rambutan', label='immature')
+        self.scan(prediction_type='rambutan', label='unknown')
+        self.scan(user=self.other_user, prediction_type='rambutan', label='mature')
+
+        data = self.client.get(self.endpoint, {'prediction_type': 'rambutan'}).json()
+        self.assertEqual(data['fruit_count'], 4)
+        self.assertEqual(data['ripe_count'], 2)
+        self.assertEqual(data['unripe_count'], 1)
+        self.assertEqual(data['assessed_count'], 3)
+
+    def test_maturity_image_is_account_scoped_and_served_from_saved_record(self):
+        with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            image_name = default_storage.save(
+                'maturity_assessments/fruit.jpg',
+                ContentFile(b'test image bytes'),
+            )
+            fruit = self.scan(prediction_type='rambutan', image_name=image_name)
+            response = self.client.get(self.endpoint, {'prediction_type': 'rambutan'})
+            self.assertEqual(response.json()['results'][0]['image_url'], f'/api/predictions/{fruit.pk}/image/')
+
+            image_response = self.client.get(f'/api/predictions/{fruit.pk}/image/')
+            self.assertEqual(image_response.status_code, 200)
+            self.assertEqual(b''.join(image_response.streaming_content), b'test image bytes')
+            self.assertEqual(image_response['Cache-Control'], 'private, no-store')
+
+            self.client.force_authenticate(self.other_user)
+            self.assertEqual(self.client.get(f'/api/predictions/{fruit.pk}/image/').status_code, 404)
 
     def test_all_records_are_reachable_across_pages_with_tied_timestamps(self):
         scans = [self.scan() for _ in range(23)]

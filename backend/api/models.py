@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 
 from django.contrib.auth.models import User
@@ -10,6 +12,38 @@ class Farmer(models.Model):
 
 	def __str__(self):
 		return self.user.username
+
+
+class ConsentIdentity(models.Model):
+	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='consent_identity')
+
+	class Meta:
+		db_table = 'consent_identities'
+
+
+class UserConsent(models.Model):
+	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+	user = models.ForeignKey(
+		ConsentIdentity,
+		db_column='user_id',
+		on_delete=models.CASCADE,
+		related_name='consents',
+	)
+	research_consent = models.BooleanField()
+	privacy_consent = models.BooleanField()
+	consent_version = models.TextField()
+	agreed_at = models.DateTimeField()
+	withdrawn_at = models.DateTimeField(null=True, blank=True)
+
+	class Meta:
+		db_table = 'user_consents'
+		ordering = ['-agreed_at']
+		indexes = [
+			models.Index(fields=['user', '-agreed_at'], name='uc_user_agreed_idx'),
+		]
+
+
 from django.db import models
 
 # Create your models here.
@@ -22,6 +56,7 @@ class SensorReading(models.Model):
 	soil_raw = models.IntegerField(null=True, blank=True)
 	moisture_pct = models.IntegerField(null=True, blank=True)
 	rain = models.IntegerField(null=True, blank=True)
+	is_raining = models.BooleanField(null=True, blank=True)
 	received_at = models.DateTimeField(auto_now_add=True)
 
 	def __str__(self):

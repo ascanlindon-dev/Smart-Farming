@@ -29,7 +29,7 @@ def validate_telemetry(payload):
         value = payload.get(field)
         if value is None:
             continue
-        if isinstance(value, bool) and field != 'rain':
+        if isinstance(value, bool):
             raise ValueError(f'{field} must be numeric.')
         if not isinstance(value, (int, float, str)):
             raise ValueError(f'{field} must be numeric.')
@@ -40,6 +40,14 @@ def validate_telemetry(payload):
         if not math.isfinite(number) or not minimum <= number <= maximum or (integer and not number.is_integer()):
             raise ValueError(f'{field} is outside the supported range.')
         result[field] = int(number) if integer else number
+    rain_keys = [key for key in ('is_raining', 'isRaining') if key in payload]
+    if any(not isinstance(payload[key], bool) for key in rain_keys):
+        raise ValueError('is_raining must be a boolean.')
+    if len(rain_keys) == 2 and payload['is_raining'] != payload['isRaining']:
+        raise ValueError('is_raining and isRaining must not conflict.')
+    if rain_keys:
+        rain_state = payload[rain_keys[0]]
+        result['is_raining'] = rain_state
     if len(result) == 1:
         raise ValueError('At least one sensor measurement is required.')
     return result

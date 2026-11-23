@@ -26,7 +26,7 @@ def sensor_readings(request):
 
     # The model's database router selects local or configured sensor storage.
     # Sensor readings are shared; this table has no per-user ownership field.
-    readings = SensorReading.objects.order_by('-received_at', '-id').values(
+    readings = SensorReading.objects.exclude(device_id='temporary-simulator').order_by('-received_at', '-id').values(
         'id', 'temperature', 'humidity', 'rain', 'received_at',
     )
     paginator = Paginator(readings, page_size)

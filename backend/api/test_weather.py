@@ -59,9 +59,12 @@ class WeatherApiTests(SimpleTestCase):
         return SimpleNamespace(
             normalized_q=views._normalize_weather_query(self.query), requested_q=self.query,
             days=days, fetched_at=self.now - age, save=Mock(),
-            payload={'current': {'temp': 28}, 'forecast': [
+            payload={
+                'current_provider': 'open_meteo', 'forecast_provider': 'open_meteo',
+                'current': {'temp': 28}, 'forecast': [
                 {'date': (self.now.date() - timedelta(days=1)).isoformat()}, {'date': self.today},
-            ], 'resolved_location': {'timezone': 'UTC'}},
+                ], 'resolved_location': {'timezone': 'UTC'},
+            },
         )
 
     def test_cache_write_failure_still_returns_live_weather(self):
@@ -110,6 +113,18 @@ class WeatherApiTests(SimpleTestCase):
         self.assertFalse(response.data['cache_available'])
         self.assertNotIn('current', response.data)
 
+    def test_non_open_meteo_cache_is_not_mixed_into_the_weather_response(self):
+        row = self.cached_row()
+        row.payload.update({
+            'current_provider': 'weatherapi',
+            'forecast_provider': 'weatherapi',
+        })
+        with patch('requests.get', side_effect=requests.Timeout()), patch.object(views.WeatherCache.objects, 'filter', side_effect=CachedRows([row]).filter):
+            response = views.weather(self.request())
+        self.assertEqual(response.status_code, 502)
+        self.assertFalse(response.data['cache_available'])
+        self.assertNotIn('current', response.data)
+
     def test_provider_http_failure_does_not_expose_the_request_url(self):
         self.provider.ok = False
         self.provider.status_code = 403
@@ -145,6 +160,89 @@ class WeatherApiTests(SimpleTestCase):
         self.assertEqual(response.data['forecast_provider'], 'open_meteo')
         self.assertEqual(get.call_args.kwargs['params']['forecast_days'], 7)
         self.assertNotIn('key', get.call_args.kwargs['params'])
+
+    def test_open_meteo_current_hourly_and_sunlight_fields_are_exposed(self):
+        self.provider_data.update({
+            'current': {
+                'temperature_2m': 29.3, 'time': self.today + 'T12:00',
+                'weather_code': 2, 'rain': 0.4, 'precipitation': 0.6,
+                'is_day': 1, 'cloud_cover': 45,
+            },
+            'hourly': {
+                'time': [self.today + f'T{hour:02}:00' for hour in range(24)],
+                'temperature_2m': [29] * 24, 'precipitation_probability': [30] * 24,
+                'rain': [0.2] * 24, 'precipitation': [0.3] * 24,
+                'weather_code': [2] * 24,
+            },
+            'daily': {
+                'time': [self.today], 'weather_code': [2],
+                'temperature_2m_max': [32], 'temperature_2m_min': [24],
+                'precipitation_sum': [4.5], 'rain_sum': [4.0],
+                'precipitation_probability_max': [60], 'wind_speed_10m_max': [20],
+                'uv_index_max': [5], 'sunrise': [self.today + 'T05:30'],
+                'sunset': [self.today + 'T17:45'], 'daylight_duration': [44100],
+                'sunshine_duration': [36000], 'precipitation_hours': [3.5],
+            },
+        })
+        with patch('requests.get', return_value=self.provider) as get, patch.object(views, '_save_weather_cache'):
+            response = views.weather(self.request(days=1))
+
+        self.assertEqual(response.status_code, 200)
+        current = response.data['current']
+        self.assertEqual(current['rain'], 0.4)
+        self.assertEqual(current['precipitation'], 0.6)
+        self.assertTrue(current['isDay'])
+        self.assertEqual(current['cloudCover'], 45)
+        self.assertEqual(response.data['hourly'][0]['precipitation'], 0.3)
+        forecast = response.data['forecast'][0]
+        self.assertEqual(forecast['rainSum'], 4.0)
+        self.assertEqual(forecast['precipitationSum'], 4.5)
+        self.assertEqual(forecast['precipitationHours'], 3.5)
+        self.assertEqual(forecast['sunrise'], self.today + 'T05:30')
+        self.assertEqual(forecast['sunset'], self.today + 'T17:45')
+        self.assertEqual(forecast['daylightDuration'], 44100)
+        self.assertEqual(forecast['sunshineDuration'], 36000)
+        params = get.call_args.kwargs['params']
+        self.assertEqual(params['timezone'], 'Asia/Manila')
+        self.assertEqual(params['latitude'], 13.1772)
+        self.assertEqual(params['longitude'], 121.2781)
+        self.assertIn('cloud_cover', params['current'])
+        self.assertIn('precipitation', params['hourly'])
+        self.assertIn('sunrise', params['daily'])
+
+    def test_daily_values_remain_aligned_to_provider_dates_and_weather_codes(self):
+        dates = [(self.now.date() + timedelta(days=index)).isoformat() for index in range(7)]
+        self.provider_data['current'].update({
+            'weather_code': 0, 'rain': 0, 'precipitation': 0,
+            'cloud_cover': 5, 'is_day': 1,
+        })
+        self.provider_data['daily'] = {
+            'time': dates,
+            'weather_code': [0, 2, 3, 53, 80, 95, 61],
+            'temperature_2m_max': [30 + index for index in range(7)],
+            'temperature_2m_min': [20 + index for index in range(7)],
+            'rain_sum': [0, 0.1, 0, 1, 2, 3, 4],
+            'precipitation_sum': [0, 0.1, 0, 1, 2, 3, 4],
+            'precipitation_probability_max': [0, 10, 0, 60, 80, 90, 50],
+            'precipitation_hours': [0, 1, 0, 2, 3, 4, 5],
+        }
+        with self.assertLogs('api.views', level='INFO') as captured, patch('requests.get', return_value=self.provider), patch.object(views, '_save_weather_cache'):
+            response = views.weather(self.request(days=7))
+        forecast = response.data['forecast']
+        self.assertEqual([day['date'] for day in forecast], dates)
+        self.assertEqual([day['weatherCode'] for day in forecast], [0, 2, 3, 53, 80, 95, 61])
+        self.assertEqual([day['condition'] for day in forecast], [
+            'Clear Sky', 'Partly Cloudy', 'Overcast', 'Drizzle',
+            'Rain Showers', 'Thunderstorm', 'Rain',
+        ])
+        self.assertEqual([day['rainSum'] for day in forecast], [0, 0.1, 0, 1, 2, 3, 4])
+        self.assertEqual([day['rainChance'] for day in forecast], [0, 10, 0, 60, 80, 90, 50])
+        self.assertEqual([day['precipitationHours'] for day in forecast], [0, 1, 0, 2, 3, 4, 5])
+        self.assertEqual(response.data['current']['condition'], 'Clear Sky')
+        self.assertEqual(response.data['current']['weatherCode'], 0)
+        self.assertIn('coordinates=(13.1772, 121.2781)', captured.output[0])
+        self.assertIn('timezone=Asia/Manila', captured.output[0])
+        self.assertIn(dates[0], captured.output[0])
 
     def test_unknown_city_does_not_silently_show_victoria_weather(self):
         self.provider.json.return_value = {'results': []}
@@ -194,3 +292,25 @@ class WeatherApiTests(SimpleTestCase):
         result = views._forecast_coverage(payload, 7)
         self.assertEqual(result['returned_days'], 1)
         self.assertFalse(result['forecast_complete'])
+
+    def test_forecast_coverage_uses_the_manila_calendar_date(self):
+        from datetime import datetime, timezone as datetime_timezone
+
+        utc_now = datetime(2026, 11, 23, 16, 5, tzinfo=datetime_timezone.utc)
+        payload = {'forecast': [
+            {'date': '2026-11-23'}, {'date': '2026-11-24'},
+        ]}
+        with patch('django.utils.timezone.now', return_value=utc_now):
+            result = views._forecast_coverage(payload, 1)
+        self.assertEqual(result['forecast'], [{'date': '2026-11-24'}])
+
+    def test_forecast_coverage_uses_the_manila_calendar_date(self):
+        from datetime import datetime, timezone as datetime_timezone
+
+        utc_now = datetime(2026, 11, 23, 16, 5, tzinfo=datetime_timezone.utc)
+        payload = {'forecast': [
+            {'date': '2026-11-23'}, {'date': '2026-11-24'},
+        ]}
+        with patch('django.utils.timezone.now', return_value=utc_now):
+            result = views._forecast_coverage(payload, 1)
+        self.assertEqual(result['forecast'], [{'date': '2026-11-24'}])

@@ -17,9 +17,10 @@ test('numeric labels follow the model class order without guessing', () => {
 });
 
 test('farmers get short actions in their selected language', () => {
-  assert.match(maturityAdvice('immature', 'tl').description, /Huwag munang anihin/);
-  assert.match(maturityAdvice('immature', 'en').description, /Leave it on the tree/);
-  assert.match(maturityAdvice('mature', 'tl').harvestingTips.join(' '), /malinis na gunting/);
+  assert.match(maturityAdvice('immature', 'tl').action, /subaybayan/);
+  assert.match(maturityAdvice('immature', 'en').action, /Continue monitoring/);
+  assert.match(maturityAdvice('mature', 'tl').harvestingTips[0], /Suriin ang bunga/);
+  assert.match(maturityAdvice('mature', 'en').harvestingTips[0], /Inspect the fruit/);
   assert.equal(maturityAdvice('immature').storageAdvice.length, 0);
   for (const language of ['en', 'tl']) {
     for (const stage of ['mature', 'immature']) {

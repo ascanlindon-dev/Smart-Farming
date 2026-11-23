@@ -100,6 +100,12 @@ def _environment_advice(environment, language):
         advice.append('Mataas ang humidity ayon sa available sensor data; palakasin ang airflow at mag-monitor nang mas madalas.' if tl else 'Available sensor data shows high humidity; improve airflow and monitor more often.')
     if isinstance(rainfall, (int, float)) and rainfall > 0:
         advice.append('May naitalang ulan ayon sa available sensor data; iwasan ang matagal na pagkabasa ng dahon kung praktikal.' if tl else 'Available sensor data records rainfall; reduce prolonged leaf wetness where practical.')
+    if environment.get('rain_detected') is True:
+        advice.append(
+            'May ulan na nakita ng sensor. Kung gagamit ng pesticide, sundin ang rainfast interval sa label; hindi ito rekomendasyong mag-apply.'
+            if tl else
+            'The sensor detects rain. If using a pesticide, follow its label rainfast interval; this is not a recommendation to apply.'
+        )
     return advice
 
 
@@ -125,7 +131,16 @@ def fallback_recommendation(disease, confidence, environment, language):
         'assessment': knowledge['assessment'],
         'immediate_actions': knowledge['actions'],
         'treatment': {'available': True, 'type': 'Management', 'details': knowledge['actions'][:2]},
-        'chemical_treatment': {'available': False, 'verified': False, 'product': None, 'message': 'Walang verified chemical treatment na kasalukuyang available sa RAMBUTECH knowledge base.' if tl else 'No verified chemical treatment is currently available in the RAMBUTECH knowledge base.'},
+        'chemical_treatment': {
+            'available': False,
+            'verified': False,
+            'product': None,
+            'message': (
+                'Walang verified chemical treatment sa RAMBUTECH knowledge base. Kung may inaasahang ulan, sundin ang rainfast interval sa label ng produkto; hindi rekomendasyon ang ulan lamang para mag-apply.'
+                if tl else
+                'No verified chemical treatment is available in the RAMBUTECH knowledge base. If rain is expected, follow the product label rainfast interval; rain alone is not a recommendation to apply.'
+            ),
+        },
         'prevention': knowledge['prevention'],
         'environmental_advice': _environment_advice(environment, language),
         'monitoring': knowledge['monitoring'],

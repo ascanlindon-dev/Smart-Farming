@@ -6,8 +6,8 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import GoogleSignInButton from "./GoogleSignInButton";
-import { Leaf, Eye, EyeOff } from "lucide-react";
-import rambutanImage from "figma:asset/a8803903c13af0b87fc355b5d6d1dbf82a50518f.png";
+import { Eye, EyeOff } from "lucide-react";
+import AuthShell from "./AuthShell";
 
 const translations = {
   en: {
@@ -49,12 +49,7 @@ const translations = {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Signup({ onSignup, onSwitchToLogin }) {
-  const { language: contextLanguage } = useContext(LanguageContext);
-  // 🌾 Remember language preference (default Tagalog)
-  const [language, setLanguage] = useState(() => {
-    const saved = localStorage.getItem("language");
-    return saved === "en" || saved === "tl" ? saved : contextLanguage;
-  });
+  const { language, changeLanguage } = useContext(LanguageContext);
 
   const t = translations[language];
   const [name, setName] = useState("");
@@ -225,229 +220,156 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
     }
   };
 
-  const changeLanguage = (lang) => {
-    setLanguage(lang);
-    localStorage.setItem("language", lang);
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-amber-50 flex items-center justify-center p-4 overflow-hidden relative">
-      {/* Unified Decorative elements */}
-      <div className="absolute top-10 right-1/4 w-80 h-80 bg-emerald-300 rounded-full blur-3xl opacity-20 sm:w-96 sm:h-96"></div>
-      <div className="absolute bottom-10 left-1/4 w-64 h-64 bg-amber-300 rounded-full blur-3xl opacity-20 sm:w-80 sm:h-80"></div>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-emerald-200 rounded-full blur-3xl opacity-10 sm:w-[600px] sm:h-[600px]"></div>
-
-      {/* Slanted Rambutan Image - Upper Right Corner Design */}
-      <div className="absolute top-0 right-0 z-0 pointer-events-none overflow-hidden">
-        <div className="transform rotate-[15deg] origin-top-right translate-x-8 -translate-y-4">
-          <img
-            src={rambutanImage}
-            alt="Rambutan fruits"
-            className="w-[200px] sm:w-[280px] md:w-[320px] lg:w-[400px] xl:w-[480px] h-auto object-contain drop-shadow-2xl opacity-90"
-          />
-        </div>
-      </div>
-
-      <div className="w-full max-w-md relative z-10">
-        {/* Signup Form */}
-        <div className="w-full">
-          {/* Logo and Title */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 rounded-2xl mb-4 shadow-lg">
-              <Leaf className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="brand-wordmark mb-2 text-emerald-800">RAMBUTECH</h1>
-            <p className="text-slate-600 mb-8">Farm Resilience & Disease Detection</p>
+    <AuthShell language={language} onLanguageChange={changeLanguage}>
+      {stage === 'otp' ? (
+        <div className="space-y-5">
+          <div>
+            <h1 className="text-[26px] font-extrabold tracking-tight text-stone-900 sm:text-3xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {language === 'tl' ? 'Tingnan ang iyong email' : 'Check your email'}
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-stone-600">{otpInfo || `We sent a verification code to ${otpEmail}.`}</p>
           </div>
-
-          {/* Language Switch */}
-          <div className="flex justify-end gap-2 mb-4">
-            <button
-              onClick={() => changeLanguage("en")}
-              className={language === "en" ? "text-emerald-700 font-bold" : "text-slate-400"}
-            >
-              EN
-            </button>
-            <button
-              onClick={() => changeLanguage("tl")}
-              className={language === "tl" ? "text-emerald-700 font-bold" : "text-slate-400"}
-            >
-              TL
-            </button>
-          </div>
-
-          <div className="max-w-md mx-auto">
-            {stage === "otp" ? (
-              <>
-                <div className="text-center mb-6">
-                  <h2 className="text-emerald-800 mb-2">Check your email</h2>
-                  <p className="text-slate-600">{otpInfo || `We sent a verification code to ${otpEmail}.`}</p>
-                </div>
-
-                <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Verification Code</Label>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="6-digit code"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ""))}
-                      autoComplete="one-time-code"
-                    />
-                  </div>
-
-                  {otpError && <p className="text-sm text-red-600">{otpError}</p>}
-
-                  <Button
-                    disabled={verifyingOtp}
-                    className="w-full bg-gradient-to-r from-emerald-700 via-teal-600 to-green-600 hover:opacity-90 text-white shadow-md"
-                  >
-                    {verifyingOtp ? "Verifying..." : "Verify Code"}
-                  </Button>
-                </form>
-
-                <div className="mt-6 text-center space-y-2">
-                  <p className="text-sm text-slate-600">
-                    Didn't get a code?{" "}
-                    <button
-                      onClick={handleResendOtp}
-                      disabled={resendCooldown > 0 || resendingOtp}
-                      className={`font-semibold transition ${
-                        resendCooldown > 0
-                          ? "text-slate-400 cursor-not-allowed"
-                          : "text-emerald-700 hover:text-emerald-800"
-                      }`}
-                    >
-                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
-                    </button>
-                  </p>
-                  <button
-                    onClick={() => setStage("form")}
-                    className="text-sm text-slate-500 hover:text-slate-700"
-                  >
-                    Back to sign up
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-            <div className="text-center mb-6">
-              <h2 className="text-emerald-800 mb-2">{t.title}</h2>
-              <p className="text-slate-600">{t.subtitle}</p>
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="signupOtp" className="text-sm font-bold text-stone-800">Verification Code</Label>
+              <Input
+                id="signupOtp"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="6-digit code"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ""))}
+                autoComplete="one-time-code"
+                className="min-h-[50px] rounded-2xl border-2 border-[#D6D3CD] bg-white px-4 text-base focus-visible:ring-emerald-700"
+                required
+              />
             </div>
-
-            {!backendUp && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
-                <strong>Service temporarily unavailable.</strong>
-                <div className="mt-2 text-sm">We could not connect to the server. Please refresh the page and try again.</div>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t.name}</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t.contact}</Label>
-                <Input
-                  type="email"
-                  placeholder="email@example.com"
-                  value={contact}
-                  onChange={(e) => setContact(e.target.value)}
-                  autoComplete="email"
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <Label>{t.password}</Label>
-                <div className="relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pr-16"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-700 p-1"
-                    tabIndex={0}
-                    aria-label={showPassword ? t.hide : t.show}
-                    title={showPassword ? t.hide : t.show}
-                    aria-pressed={showPassword}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password */}
-              <div className="space-y-2">
-                <Label>{t.confirm}</Label>
-                <div className="relative">
-                  <Input
-                    type={showConfirm ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pr-16"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-700 p-1"
-                    tabIndex={0}
-                    aria-label={showConfirm ? t.hide : t.show}
-                    title={showConfirm ? t.hide : t.show}
-                    aria-pressed={showConfirm}
-                  >
-                    {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              {error && <p className="text-sm text-red-600">{error}</p>}
-
-              <Button
-                className="w-full bg-gradient-to-r from-emerald-700 via-teal-600 to-green-600 hover:opacity-90 text-white shadow-md"
+            {otpError && <p role="alert" className="text-sm text-red-700">{otpError}</p>}
+            <Button type="submit" disabled={verifyingOtp} className="min-h-[52px] w-full rounded-2xl bg-[#14532D] text-base font-bold text-white hover:bg-[#0F3F22]">
+              {verifyingOtp ? 'Verifying...' : (language === 'tl' ? 'I-verify ang Code' : 'Verify Code')}
+            </Button>
+          </form>
+          <div className="space-y-3 text-center">
+            <p className="text-sm text-stone-600">
+              {language === 'tl' ? 'Walang natanggap na code?' : "Didn't get a code?"}{' '}
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0 || resendingOtp}
+                className="font-bold text-[#14532D] hover:underline disabled:cursor-not-allowed disabled:text-stone-400"
               >
-                {t.button}
-              </Button>
-              <div className="flex items-center gap-3 text-xs text-slate-500">
-                <span className="h-px flex-1 bg-slate-300" />
-                <span>or</span>
-                <span className="h-px flex-1 bg-slate-300" />
-              </div>
-              <div className="flex justify-center">
-                <GoogleSignInButton onCredential={handleGoogleSignIn} />
-              </div>
-            </form>
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : (language === 'tl' ? 'Ipadala muli' : 'Resend code')}
+              </button>
+            </p>
+            <button type="button" onClick={() => setStage('form')} className="min-h-11 rounded-lg px-3 text-sm font-bold text-stone-600 hover:bg-stone-100">
+              {language === 'tl' ? 'Bumalik sa pag-sign up' : 'Back to sign up'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="mb-6">
+            <h1 className="text-2xl font-extrabold tracking-tight text-stone-900 sm:text-3xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {language === 'tl' ? t.title : 'Create Farmer Account'}
+            </h1>
+            <p className="mt-2 text-[15px] text-stone-600">
+              {language === 'tl' ? t.subtitle : 'Start monitoring your rambutan farm today.'}
+            </p>
+          </div>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-slate-600">
-                Already have an account?{" "}
-                <button
-                  onClick={onSwitchToLogin}
-                  className="text-emerald-700 hover:text-emerald-800 font-semibold"
-                >
-                  Log in
-                </button>
-              </p>
+          {!backendUp && (
+            <div role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-800">
+              <strong>Service temporarily unavailable.</strong>
+              <span className="ml-1">{language === 'tl' ? 'Hindi makakonekta sa server. I-refresh ang page at subukan muli.' : 'We could not connect to the server. Please refresh the page and try again.'}</span>
             </div>
-              </>
-            )}
+          )}
 
-            {/* Info Text */}
-            <p className="text-center text-sm text-slate-500 mt-6">
-              Smart farming solutions for rambutan cultivation
+          <GoogleSignInButton onCredential={handleGoogleSignIn} />
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-[#D6D3CD]" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-stone-600">{language === 'tl' ? 'o gamitin ang email' : 'or use email'}</span>
+            <span className="h-px flex-1 bg-[#D6D3CD]" />
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="signupName" className="text-sm font-bold text-stone-800">{t.name}</Label>
+              <Input
+                id="signupName"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+                placeholder={language === 'tl' ? 'hal. Juan Dela Cruz' : 'e.g. Juan Dela Cruz'}
+                className="min-h-[50px] rounded-xl border border-[#D6D3CD] bg-white px-4 text-[15px] focus-visible:border-[#14532D] focus-visible:ring-4 focus-visible:ring-emerald-600/20"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signupEmail" className="text-sm font-bold text-stone-800">{t.contact}</Label>
+              <Input
+                id="signupEmail"
+                type="email"
+                placeholder={language === 'tl' ? 'magsasaka@example.com' : 'farmer@example.com'}
+                value={contact}
+                onChange={(e) => setContact(e.target.value)}
+                autoComplete="email"
+                className="min-h-[50px] rounded-xl border border-[#D6D3CD] bg-white px-4 text-[15px] focus-visible:border-[#14532D] focus-visible:ring-4 focus-visible:ring-emerald-600/20"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signupPassword" className="text-sm font-bold text-stone-800">{t.password}</Label>
+              <div className="relative">
+                <Input
+                  id="signupPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  className="min-h-[50px] rounded-xl border border-[#D6D3CD] bg-white px-4 pr-14 text-[15px] focus-visible:border-[#14532D] focus-visible:ring-4 focus-visible:ring-emerald-600/20"
+                  required
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-stone-600 hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-[#14532D]" aria-label={showPassword ? t.hide : t.show} aria-pressed={showPassword}>
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signupConfirmPassword" className="text-sm font-bold text-stone-800">{t.confirm}</Label>
+              <div className="relative">
+                <Input
+                  id="signupConfirmPassword"
+                  type={showConfirm ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                  className="min-h-[50px] rounded-xl border border-[#D6D3CD] bg-white px-4 pr-14 text-[15px] focus-visible:border-[#14532D] focus-visible:ring-4 focus-visible:ring-emerald-600/20"
+                  required
+                />
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-stone-600 hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-[#14532D]" aria-label={showConfirm ? t.hide : t.show} aria-pressed={showConfirm}>
+                  {showConfirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+            <Button type="submit" className="min-h-[52px] w-full rounded-xl bg-[#14532D] text-[15px] font-bold text-white shadow-lg shadow-emerald-950/20 hover:bg-[#0F3F22]">
+              {t.button}
+            </Button>
+          </form>
+
+          <div className="mt-6 border-t border-stone-200 pt-4 text-center">
+            <p className="text-sm text-stone-600">
+              {language === 'tl' ? 'May account ka na ba?' : 'Already have an account?'}{' '}
+              <button type="button" onClick={onSwitchToLogin} className="min-h-10 rounded-lg px-2 font-bold text-[#14532D] hover:underline">
+                {language === 'tl' ? 'Mag-sign In' : 'Sign In'}
+              </button>
             </p>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </AuthShell>
   );
 }

@@ -48,7 +48,7 @@ export default function GoogleSignInButton({ onCredential, disabled = false }) {
   return (
     <div
       ref={buttonRef}
-      className={`min-h-[44px] w-full ${disabled ? "pointer-events-none opacity-60" : ""}`}
+      className={`auth-google-button min-h-[44px] w-full ${disabled ? "pointer-events-none opacity-60" : ""}`}
       aria-label="Continue with Google"
       aria-disabled={disabled}
       inert={disabled ? "" : undefined}

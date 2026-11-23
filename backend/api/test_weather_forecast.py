@@ -17,7 +17,9 @@ class ExtendedForecastTests(SimpleTestCase):
         self.daily = {
             'time': self.dates, 'weather_code': [95] * 7,
             'temperature_2m_max': [31.6] * 7, 'temperature_2m_min': [24.2] * 7,
-            'precipitation_sum': [20.14] * 7, 'wind_speed_10m_max': [22.3] * 7,
+            'rain_sum': [19.9] * 7, 'precipitation_sum': [20.14] * 7,
+            'precipitation_probability_max': [80] * 7, 'precipitation_hours': [3.5] * 7,
+            'wind_speed_10m_max': [22.3] * 7,
             'relative_humidity_2m_mean': [80.1] * 7, 'uv_index_max': [5.2] * 7,
         }
         clock = patch('api.weather_forecast.timezone.now', return_value=now)
@@ -38,6 +40,10 @@ class ExtendedForecastTests(SimpleTestCase):
         self.assertEqual([day['date'] for day in result], self.dates)
         self.assertEqual(result[0]['temperature'], {'max': 32, 'min': 24})
         self.assertEqual(result[0]['rainfall'], 20.1)
+        self.assertEqual(result[0]['rainSum'], 19.9)
+        self.assertEqual(result[0]['precipitationSum'], 20.1)
+        self.assertEqual(result[0]['rainChance'], 80)
+        self.assertEqual(result[0]['precipitationHours'], 3.5)
         self.assertEqual(result[0]['wind'], 22)
         self.assertEqual(result[0]['condition'], 'Thunderstorm')
         params = get.call_args.kwargs['params']
@@ -58,6 +64,9 @@ class ExtendedForecastTests(SimpleTestCase):
         missing = deepcopy(self.daily)
         missing['temperature_2m_max'][4] = None
         invalid.append(missing)
+        missing_precipitation = deepcopy(self.daily)
+        missing_precipitation['rain_sum'][2] = None
+        invalid.append(missing_precipitation)
         bad_number = deepcopy(self.daily)
         bad_number['precipitation_sum'][2] = float('nan')
         invalid.append(bad_number)
@@ -65,6 +74,23 @@ class ExtendedForecastTests(SimpleTestCase):
             with self.subTest(daily=daily), patch('api.weather_forecast.requests.get', return_value=self.provider(daily)):
                 with self.assertRaises(ForecastUnavailable):
                     fetch_extended_forecast(self.location, 7)
+
+    def test_all_wmo_weather_code_groups_are_mapped(self):
+        from api.weather_forecast import condition_for_code
+
+        expected = {
+            0: 'Clear Sky', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+            45: 'Fog', 48: 'Fog', 51: 'Drizzle', 53: 'Drizzle', 55: 'Drizzle',
+            56: 'Freezing Drizzle', 57: 'Freezing Drizzle',
+            61: 'Rain', 63: 'Rain', 65: 'Rain', 66: 'Freezing Rain', 67: 'Freezing Rain',
+            71: 'Snow', 73: 'Snow', 75: 'Snow', 77: 'Snow',
+            80: 'Rain Showers', 81: 'Rain Showers', 82: 'Rain Showers',
+            85: 'Snow Showers', 86: 'Snow Showers',
+            95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm',
+        }
+        self.assertEqual({code: condition_for_code(code) for code in expected}, expected)
+        self.assertEqual(condition_for_code(None), 'Unknown')
+        self.assertEqual(condition_for_code(2.5), 'Unknown')
 
     def test_commercial_key_selects_customer_endpoint(self):
         with patch.dict(os.environ, {'OPEN_METEO_API_KEY': 'test-key'}), patch('api.weather_forecast.requests.get', return_value=self.provider(self.daily)) as get:

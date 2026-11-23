@@ -1,7 +1,9 @@
-import { useContext, useEffect, useId, useState } from 'react';
+import { useContext, useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { LanguageContext } from '../LanguageContext';
 import { apiFetch } from '../lib/apiFetch.mjs';
+import { maturityReadiness } from '../lib/maturityAdvice.mjs';
+import { readSessionData, writeSessionData } from '../lib/sessionDataCache.mjs';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
@@ -9,10 +11,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 const translations = {
   en: {
     title: 'Prediction Transactions',
+    leafTitle: 'Leaf Disease Scans',
+    maturityTitle: 'Maturity Assessment Scans',
     description: 'Your latest 50 saved leaf disease and fruit maturity scans, newest first.',
+    leafDescription: 'Saved leaf disease scan results, newest first.',
+    maturityDescription: 'Saved rambutan maturity scan results, newest first.',
     totalTransactions: 'Total Transactions',
     leafTransactions: 'Leaf',
     fruitTransactions: 'Fruit',
+    assessedFruits: 'Assessed fruits',
+    ripe: 'Ripe',
+    unripe: 'Unripe',
+    photo: 'Fruit photo',
+    confidence: 'Confidence',
+    unavailablePhoto: 'Image unavailable',
+    previousPage: 'Previous',
+    nextPage: 'Next',
+    pageOf: (page, total) => `Page ${page} of ${total}`,
     predictionType: 'Prediction Type',
     label: 'Label',
     imageName: 'Image Name',
@@ -20,9 +35,12 @@ const translations = {
     refresh: 'Refresh',
     loading: 'Loading your transactions...',
     error: 'Unable to load your transactions. Please try again.',
+    stale: 'Showing saved transactions. The latest refresh failed.',
     expired: 'Your session has expired. Please sign in again to view your transactions.',
     retry: 'Try again',
     empty: 'No prediction transactions yet. Saved scans will appear here.',
+    leafEmpty: 'No leaf disease scans saved yet.',
+    maturityEmpty: 'No maturity assessment scans saved yet.',
     noImage: 'No image name',
     localTime: 'Dates and times use your local timezone.',
     expand: 'View latest 50',
@@ -31,10 +49,23 @@ const translations = {
   },
   tl: {
     title: 'Mga Transaksyon ng Prediksyon',
+    leafTitle: 'Mga Scan ng Sakit sa Dahon',
+    maturityTitle: 'Mga Scan ng Pagtatasa ng Pagkahinog',
     description: 'Ang pinakabagong 50 naka-save na scan ng sakit sa dahon at pagkahinog ng bunga sa iyong account, pinakabago muna.',
+    leafDescription: 'Mga naka-save na resulta ng scan sa sakit ng dahon, pinakabago muna.',
+    maturityDescription: 'Mga naka-save na resulta ng scan sa pagkahinog ng rambutan, pinakabago muna.',
     totalTransactions: 'Kabuuang Transaksyon',
     leafTransactions: 'Dahon',
     fruitTransactions: 'Prutas',
+    assessedFruits: 'Mga nasuring bunga',
+    ripe: 'Hinog',
+    unripe: 'Hindi pa hinog',
+    photo: 'Larawan ng bunga',
+    confidence: 'Kumpiyansa',
+    unavailablePhoto: 'Hindi available ang larawan',
+    previousPage: 'Nakaraan',
+    nextPage: 'Susunod',
+    pageOf: (page, total) => `Pahina ${page} sa ${total}`,
     predictionType: 'Uri ng Prediksyon',
     label: 'Label',
     imageName: 'Pangalan ng Larawan',
@@ -42,9 +73,12 @@ const translations = {
     refresh: 'I-refresh',
     loading: 'Kinukuha ang iyong mga transaksyon...',
     error: 'Hindi makuha ang iyong mga transaksyon. Subukan muli.',
+    stale: 'Ipinapakita ang naka-save na transaksyon. Nabigo ang pinakabagong pag-refresh.',
     expired: 'Nag-expire ang iyong session. Mag-sign in muli upang makita ang iyong mga transaksyon.',
     retry: 'Subukan muli',
     empty: 'Wala pang transaksyon ng prediksyon. Lalabas dito ang mga naka-save na scan.',
+    leafEmpty: 'Wala pang naka-save na scan ng sakit sa dahon.',
+    maturityEmpty: 'Wala pang naka-save na scan ng pagtatasa ng pagkahinog.',
     noImage: 'Walang pangalan ng larawan',
     localTime: 'Ang petsa at oras ay ayon sa iyong lokal na timezone.',
     expand: 'Tingnan ang huling 50',
@@ -53,25 +87,70 @@ const translations = {
   },
 };
 
-export default function PredictionTransactions() {
+function getTransactionsPath(predictionType, page) {
+  const params = new URLSearchParams({ page_size: '50', page: String(page) });
+  if (predictionType) params.set('prediction_type', predictionType);
+  return `/api/predictions/transactions/?${params.toString()}`;
+}
+
+function MaturityHistoryPhoto({ src, alt, unavailableLabel }) {
+  const [failed, setFailed] = useState(false);
+  if (failed || !src) {
+    return <span className="text-xs text-slate-500">{unavailableLabel}</span>;
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="h-14 w-14 rounded-lg border border-slate-200 bg-slate-50 object-cover"
+    />
+  );
+}
+
+export default function PredictionTransactions({ predictionType = '', onCountsChange, refreshKey = 0 }) {
   const { language } = useContext(LanguageContext);
   const t = translations[language] || translations.en;
+  const title = predictionType === 'leaf' ? t.leafTitle : predictionType === 'rambutan' ? t.maturityTitle : t.title;
+  const description = predictionType === 'leaf'
+    ? t.leafDescription
+    : predictionType === 'rambutan'
+      ? t.maturityDescription
+      : t.description;
+  const emptyMessage = predictionType === 'leaf'
+    ? t.leafEmpty
+    : predictionType === 'rambutan'
+      ? t.maturityEmpty
+      : t.empty;
   const [expanded, setExpanded] = useState(false);
+  const [page, setPage] = useState(1);
   const contentId = useId();
   const [revision, setRevision] = useState(0);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const requestPath = getTransactionsPath(predictionType, page);
+  const [initialCache] = useState(() => readSessionData(requestPath));
+  const [data, setData] = useState(initialCache?.data ?? null);
+  const requestPathRef = useRef(requestPath);
+  const [loading, setLoading] = useState(!initialCache);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true);
+    const cached = readSessionData(requestPath);
+    const pathChanged = requestPathRef.current !== requestPath;
+    requestPathRef.current = requestPath;
+    if (cached) {
+      setData(cached.data);
+      onCountsChange?.({ leaf: cached.data.leaf_count, maturity: cached.data.fruit_count });
+    } else if (pathChanged) {
+      setData(null);
+    }
+    setLoading(!cached && (pathChanged || !data));
     setError(null);
-    setData(null);
 
     async function loadTransactions() {
       try {
-        const response = await apiFetch('/api/predictions/transactions/?page_size=50', {
+        const response = await apiFetch(requestPath, {
           signal: controller.signal,
           cache: 'no-store',
         });
@@ -81,7 +160,11 @@ export default function PredictionTransactions() {
         }
         if (!response.ok) throw new Error('Unable to load transactions');
         const result = await response.json();
-        if (!controller.signal.aborted) setData(result);
+        if (!controller.signal.aborted) {
+          setData(result);
+          writeSessionData(requestPath, result);
+          onCountsChange?.({ leaf: result.leaf_count, maturity: result.fruit_count });
+        }
       } catch {
         if (!controller.signal.aborted) setError('error');
       } finally {
@@ -91,7 +174,7 @@ export default function PredictionTransactions() {
 
     void loadTransactions();
     return () => controller.abort();
-  }, [revision]);
+  }, [onCountsChange, page, predictionType, refreshKey, requestPath, revision]);
 
   const refresh = () => setRevision((value) => value + 1);
   const dateFormatter = new Intl.DateTimeFormat(language === 'tl' ? 'fil-PH' : 'en-PH', {
@@ -105,8 +188,8 @@ export default function PredictionTransactions() {
     <Card className="min-w-0 border-slate-200 bg-white shadow-sm">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <CardTitle className="text-base text-slate-900">{t.title}</CardTitle>
-          <CardDescription className="mt-1 text-sm text-slate-600">{t.description}</CardDescription>
+          <CardTitle className="text-base text-slate-900">{title}</CardTitle>
+          <CardDescription className="mt-1 text-sm text-slate-600">{description}</CardDescription>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button type="button" variant="outline" onClick={refresh} disabled={loading}>
@@ -122,51 +205,101 @@ export default function PredictionTransactions() {
         </div>
       </CardHeader>
       <CardContent id={contentId} className="min-w-0 space-y-4" aria-busy={loading}>
-        {loading ? (
-          <p role="status" className="py-8 text-center text-sm text-slate-600">{t.loading}</p>
-        ) : error ? (
+        {error === 'expired' ? (
           <div role="alert" className="space-y-3 rounded-xl bg-red-50 p-4 text-sm text-red-800">
-            <p>{t[error]}</p>
+            <p>{t.expired}</p>
+            <Button type="button" variant="outline" onClick={refresh}>{t.retry}</Button>
+          </div>
+        ) : loading && !data ? (
+          <p role="status" className="py-8 text-center text-sm text-slate-600">{t.loading}</p>
+        ) : error && !data ? (
+          <div role="alert" className="space-y-3 rounded-xl bg-red-50 p-4 text-sm text-red-800">
+            <p>{t.error}</p>
             <Button type="button" variant="outline" onClick={refresh}>{t.retry}</Button>
           </div>
         ) : data && (
           <>
-            <Table aria-label={t.title}>
+            {error && <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{t.stale}</p>}
+            <Table aria-label={title}>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead scope="col">{t.predictionType}</TableHead>
-                  <TableHead scope="col">{t.label}</TableHead>
-                  <TableHead scope="col">{t.imageName}</TableHead>
-                  <TableHead scope="col">{t.createdAt}</TableHead>
+                  {predictionType === 'rambutan' ? (
+                    <>
+                      <TableHead scope="col">{t.photo}</TableHead>
+                      <TableHead scope="col">{t.label}</TableHead>
+                      <TableHead scope="col">{t.confidence}</TableHead>
+                      <TableHead scope="col">{t.createdAt}</TableHead>
+                    </>
+                  ) : (
+                    <>
+                      <TableHead scope="col">{t.predictionType}</TableHead>
+                      <TableHead scope="col">{t.label}</TableHead>
+                      <TableHead scope="col">{t.imageName}</TableHead>
+                      <TableHead scope="col">{t.createdAt}</TableHead>
+                    </>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {visibleRecords.length ? visibleRecords.map((record) => (
                   <TableRow key={record.id}>
-                    <TableCell>
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${record.prediction_type === 'leaf' ? 'bg-emerald-50 text-emerald-800' : 'bg-orange-50 text-orange-800'}`}>
-                        {record.prediction_type}
-                      </span>
-                    </TableCell>
-                    <TableCell className="max-w-xs whitespace-normal break-words font-medium text-slate-900">{record.label}</TableCell>
-                    <TableCell className="max-w-xs whitespace-normal break-all text-slate-600">{record.image_name || t.noImage}</TableCell>
+                    {predictionType === 'rambutan' ? (
+                      <>
+                        <TableCell>
+                          <MaturityHistoryPhoto
+                            src={record.image_url}
+                            alt={`${t.photo} ${record.id}`}
+                            unavailableLabel={t.unavailablePhoto}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-900">
+                          {maturityReadiness(record.label) === 'mature'
+                            ? t.ripe
+                            : maturityReadiness(record.label) === 'immature'
+                              ? t.unripe
+                              : record.label}
+                        </TableCell>
+                        <TableCell className="text-slate-600">
+                          {record.confidence !== null && record.confidence !== undefined
+                            && Number.isFinite(Number(record.confidence))
+                            ? `${(Number(record.confidence) * 100).toFixed(1)}%`
+                            : '—'}
+                        </TableCell>
+                      </>
+                    ) : (
+                      <>
+                        <TableCell>
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${record.prediction_type === 'leaf' ? 'bg-emerald-50 text-emerald-800' : 'bg-orange-50 text-orange-800'}`}>
+                            {record.prediction_type}
+                          </span>
+                        </TableCell>
+                        <TableCell className="max-w-xs whitespace-normal break-words font-medium text-slate-900">{record.label}</TableCell>
+                        <TableCell className="max-w-xs whitespace-normal break-all text-slate-600">{record.image_name || t.noImage}</TableCell>
+                      </>
+                    )}
                     <TableCell className="text-slate-600">
                       <time dateTime={record.created_at}>{dateFormatter.format(new Date(record.created_at))}</time>
                     </TableCell>
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="whitespace-normal py-8 text-center text-slate-500">{t.empty}</TableCell>
+                    <TableCell colSpan={4} className="whitespace-normal py-8 text-center text-slate-500">{emptyMessage}</TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
             <dl className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm sm:grid-cols-3 sm:gap-6">
-              {[
-                [t.totalTransactions, data.count],
-                [t.leafTransactions, data.leaf_count],
-                [t.fruitTransactions, data.fruit_count],
-              ].map(([label, count]) => (
+              {(predictionType === 'rambutan'
+                ? [
+                    [t.assessedFruits, data.assessed_count],
+                    [t.ripe, data.ripe_count],
+                    [t.unripe, data.unripe_count],
+                  ]
+                : [
+                    [t.totalTransactions, data.total_count ?? data.count],
+                    [t.leafTransactions, data.leaf_count],
+                    [t.fruitTransactions, data.fruit_count],
+                  ]).map(([label, count]) => (
                 <div key={label} className="flex items-baseline gap-2">
                   <dt className="font-medium text-slate-700">{label}</dt>
                   <dd className="font-semibold tabular-nums text-slate-900">
@@ -180,12 +313,27 @@ export default function PredictionTransactions() {
                 <p role="status">{t.showing(visibleRecords.length, recentRecords.length)}</p>
                 <p className="mt-1 text-xs">{t.localTime}</p>
               </div>
-              {expanded && (
-                <Button type="button" variant="outline" size="sm" onClick={() => setExpanded(false)}
-                  aria-expanded={expanded} aria-controls={contentId}>
-                  <ChevronUp className="h-4 w-4" aria-hidden="true" />{t.minimize}
-                </Button>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {expanded && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setExpanded(false)}
+                    aria-expanded={expanded} aria-controls={contentId}>
+                    <ChevronUp className="h-4 w-4" aria-hidden="true" />{t.minimize}
+                  </Button>
+                )}
+                {data.total_pages > 1 && (
+                  <>
+                    <Button type="button" variant="outline" size="sm" disabled={page <= 1 || loading}
+                      onClick={() => setPage((value) => Math.max(1, value - 1))}>
+                      {t.previousPage}
+                    </Button>
+                    <span className="text-xs tabular-nums">{t.pageOf(data.page, data.total_pages)}</span>
+                    <Button type="button" variant="outline" size="sm" disabled={page >= data.total_pages || loading}
+                      onClick={() => setPage((value) => Math.min(data.total_pages, value + 1))}>
+                      {t.nextPage}
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </>
         )}

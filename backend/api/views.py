@@ -9,21 +9,24 @@ from django.middleware.csrf import get_token
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.conf import settings
-from django.db import router, transaction
 from django.shortcuts import redirect
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
 from pathlib import Path
 import json
+import logging
 import os
-import random
 import re
 import math
 import secrets
+import uuid
 from collections import defaultdict
 from datetime import timedelta, datetime
 
@@ -33,8 +36,20 @@ from prediction_checks import validate_probabilities
 from rambutan_guard import verify_rambutan, VerifierUnavailable
 from leaf_guard import verify_leaf
 
-from .models import Farmer, SensorReading, Prediction, WeatherCache
-from .weather_forecast import fetch_extended_forecast
+from .models import (
+	ConsentIdentity,
+	Farmer,
+	Prediction,
+	SensorReading,
+	UserConsent,
+	WeatherCache,
+)
+from .consent import (
+	CONSENT_VERSION,
+	consent_database_scope,
+	consent_identity_for,
+)
+from .weather_forecast import condition_for_code
 from django.utils import timezone
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
@@ -45,6 +60,8 @@ from .prediction_storage import save_prediction, prediction_storage_status
 from .hosting_permissions import HostedAccountRequired
 
 BASE_DIR = Path(__file__).resolve().parents[1]
+FARM_WEATHER_TIMEZONE = 'Asia/Manila'
+logger = logging.getLogger(__name__)
 
 
 def _normalize_rambutan_label(label):
@@ -331,6 +348,30 @@ def _resolve_history_window(request):
 		except Exception:
 			pass
 
+	if range_param == 'all':
+		earliest_dates = list(
+			SensorReading.objects.exclude(device_id='temporary-simulator')
+			.order_by('received_at')
+			.values_list('received_at', flat=True)[:1]
+		)
+		if getattr(request.user, 'is_authenticated', False):
+			earliest_dates.extend(
+				Prediction.objects.filter(user=request.user)
+				.order_by('created_at')
+				.values_list('created_at', flat=True)[:1]
+			)
+		start_date = min((timezone.localdate(value) for value in earliest_dates), default=today)
+		start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+		end_dt = timezone.make_aware(datetime.combine(today + timedelta(days=1), datetime.min.time()))
+		return {
+			'range_param': range_param,
+			'days': max(1, (today - start_date).days + 1),
+			'start_dt': start_dt,
+			'end_dt': end_dt,
+			'bucket_mode': 'month',
+			'custom': False,
+		}
+
 	if range_param == 'today':
 		start_dt = timezone.make_aware(datetime.combine(today, datetime.min.time()))
 		end_dt = timezone.make_aware(datetime.combine(today + timedelta(days=1), datetime.min.time()))
@@ -439,6 +480,144 @@ def ping(request):
 @api_view(['GET'])
 def csrf_token(request):
 	return Response({'csrfToken': get_token(request)}, headers={'Cache-Control': 'no-store'})
+
+
+def _serialize_user_consent(record, email=None):
+	payload = {
+		'id': str(record.pk),
+		'user_id': str(record.user_id),
+		'research_consent': record.research_consent,
+		'privacy_consent': record.privacy_consent,
+		'consent_version': record.consent_version,
+		'agreed_at': record.agreed_at.isoformat(),
+		'withdrawn_at': record.withdrawn_at.isoformat() if record.withdrawn_at else None,
+	}
+	if email is not None:
+		payload['email'] = email
+	return payload
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def user_consent(request):
+	identity = consent_identity_for(request.user)
+
+	if request.method == 'POST':
+		payload = request.data
+		if not isinstance(payload, dict):
+			return Response({'error': 'Consent choices must be an object.'}, status=400)
+		research_consent = payload.get('research_consent')
+		privacy_consent = payload.get('privacy_consent')
+		if type(research_consent) is not bool or type(privacy_consent) is not bool:
+			return Response({'error': 'Both consent choices must be explicitly selected.'}, status=400)
+		if not privacy_consent:
+			return Response(
+				{'error': 'Privacy consent is required to use the farm system. Decline to leave without saving consent.'},
+				status=400,
+			)
+
+		agreed_at = timezone.now()
+		with consent_database_scope(request.user, identity):
+			active_records = UserConsent.objects.filter(
+				user_id=identity.pk,
+				withdrawn_at__isnull=True,
+			)
+			current = active_records.order_by('-agreed_at').first()
+			if (
+				current
+				and current.consent_version == CONSENT_VERSION
+				and current.privacy_consent == privacy_consent
+				and current.research_consent == research_consent
+			):
+				record = current
+			else:
+				active_records.update(withdrawn_at=agreed_at)
+				record = UserConsent.objects.create(
+					user_id=identity.pk,
+					research_consent=research_consent,
+					privacy_consent=privacy_consent,
+					consent_version=CONSENT_VERSION,
+					agreed_at=agreed_at,
+				)
+			history = list(
+				UserConsent.objects
+				.filter(user_id=identity.pk)
+				.order_by('-agreed_at')[:25]
+			)
+		return Response({
+			'current': _serialize_user_consent(record),
+			'history': [_serialize_user_consent(item) for item in history],
+			'consentVersion': CONSENT_VERSION,
+			'privacyAccepted': record.privacy_consent and record.consent_version == CONSENT_VERSION,
+			'researchAccepted': record.research_consent and record.consent_version == CONSENT_VERSION,
+			'requiresConsent': False,
+		})
+
+	with consent_database_scope(request.user, identity):
+		history = list(
+			UserConsent.objects
+			.filter(user_id=identity.pk)
+			.order_by('-agreed_at')[:25]
+		)
+		current = next((record for record in history if record.withdrawn_at is None), None)
+
+	version_is_current = bool(current and current.consent_version == CONSENT_VERSION)
+	privacy_accepted = bool(version_is_current and current.privacy_consent)
+	research_accepted = bool(privacy_accepted and current.research_consent)
+	return Response({
+		'current': _serialize_user_consent(current) if current else None,
+		'history': [_serialize_user_consent(item) for item in history],
+		'consentVersion': CONSENT_VERSION,
+		'privacyAccepted': privacy_accepted,
+		'researchAccepted': research_accepted,
+		'requiresConsent': not privacy_accepted,
+	})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def withdraw_user_consent(request):
+	if not isinstance(request.data, dict) or request.data.get('scope') != 'all':
+		return Response({'error': 'A full consent withdrawal must be explicitly requested.'}, status=400)
+
+	identity = consent_identity_for(request.user)
+	with consent_database_scope(request.user, identity):
+		active_records = UserConsent.objects.filter(
+			user_id=identity.pk,
+			withdrawn_at__isnull=True,
+		)
+		if not active_records.exists():
+			return Response({'error': 'There is no active consent to withdraw.'}, status=404)
+		withdrawn_at = timezone.now()
+		active_records.update(withdrawn_at=withdrawn_at)
+
+	return Response({
+		'message': 'Consent withdrawn.',
+		'withdrawn_at': withdrawn_at.isoformat(),
+		'requiresConsent': True,
+	})
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_user_consents(request):
+	identity = consent_identity_for(request.user)
+	with consent_database_scope(request.user, identity):
+		records = list(
+			UserConsent.objects
+			.order_by('-agreed_at')[:500]
+		)
+	emails = dict(
+		ConsentIdentity.objects
+		.filter(pk__in=[record.user_id for record in records])
+		.values_list('pk', 'user__email')
+	)
+	return Response({
+		'results': [
+			_serialize_user_consent(record, email=emails.get(record.user_id, ''))
+			for record in records
+		],
+	})
 
 
 @api_view(['POST'])
@@ -751,27 +930,37 @@ def _leaf_likeness_score(pil_img):
 
 
 def _latest_sensor_reading():
-	"""Return the latest reading, optionally filling the temporary sensor gap."""
-	if not getattr(settings, 'SENSOR_SIMULATION_ENABLED', False):
-		return SensorReading.objects.order_by('-received_at', '-id').first()
+	return SensorReading.objects.exclude(device_id='temporary-simulator').order_by('-received_at', '-id').first()
 
-	interval = max(1, int(getattr(settings, 'SENSOR_SIMULATION_INTERVAL_SECONDS', 20)))
-	sensor_db = router.db_for_write(SensorReading) or 'default'
-	readings = SensorReading.objects.using(sensor_db)
-	with transaction.atomic(using=sensor_db):
-		# Lock the latest row so concurrent dashboard polls do not create a row
-		# every time they arrive at the simulation interval.
-		latest = readings.select_for_update().order_by('-received_at', '-id').first()
-		if latest is not None:
-			age = (timezone.now() - latest.received_at).total_seconds()
-			if age < interval:
-				return latest
 
-		return readings.create(
-			device_id='temporary-simulator',
-			temperature=round(random.uniform(27.0, 30.0), 2),
-			humidity=round(random.uniform(67.0, 80.0), 2),
-		)
+def _rain_state_from_reading(reading):
+	if reading.is_raining is not None:
+		return reading.is_raining
+	if reading.rain == 0:
+		return False
+	if reading.rain == 1:
+		return True
+	return None
+
+
+def _stable_rain_status(reading):
+	"""Report rain only after two recent, consecutive verified device states agree."""
+	if reading is None:
+		return None
+	now = timezone.now()
+	recent_readings = list(
+		SensorReading.objects.filter(
+			device_id=reading.device_id,
+			received_at__gte=now - timedelta(seconds=120),
+			received_at__lte=now + timedelta(seconds=60),
+		).order_by('-received_at', '-id')[:2]
+	)
+	if len(recent_readings) != 2:
+		return None
+	states = [_rain_state_from_reading(sample) for sample in recent_readings]
+	if states[0] is None or states[0] != states[1]:
+		return None
+	return states[0]
 
 
 @api_view(['GET', 'POST'])
@@ -786,8 +975,9 @@ def sensors(request):
 					'soilMoisture': latest.moisture_pct,
 					'rainfall': None,  # No calibrated rainfall amount is supplied by this device.
 					'rain': latest.rain,
+					'rainRaw': latest.rain,
 					'windSpeed': None,  # Not available in current model
-					'isRaining': bool(latest.rain) if latest.rain is not None else None,
+					'isRaining': _stable_rain_status(latest),
 					'humidity': latest.humidity,
 					'pressure_hpa': getattr(latest, 'pressure_hpa', None),
 					'soil_raw': latest.soil_raw,
@@ -806,7 +996,7 @@ def sensors(request):
 @api_view(['GET'])
 def sensor_history(request):
     window = _resolve_history_window(request)
-    readings = list(SensorReading.objects.filter(
+    readings = list(SensorReading.objects.exclude(device_id='temporary-simulator').filter(
         received_at__gte=window['start_dt'], received_at__lt=window['end_dt'],
     ).order_by('received_at'))
     monthly = window['bucket_mode'] == 'month'
@@ -834,7 +1024,7 @@ def sensor_history(request):
     temperature_data, humidity_data, rainfall_data, risks = [], [], [], []
     for key in keys:
         date = datetime.strptime(key, '%Y-%m' if monthly else '%Y-%m-%d')
-        label = date.strftime('%b' if monthly else ('%b %d' if window['days'] > 31 else '%a'))
+        label = date.strftime('%b %y' if window['range_param'] == 'all' else '%b') if monthly else date.strftime('%b %d' if window['days'] > 31 else '%a')
         temperature = average(buckets[key]['temperature'])
         humidity = average(buckets[key]['humidity'])
         risk = min(100, round(15 + min(50, max(0, humidity - 50)))) if humidity is not None else None
@@ -927,7 +1117,7 @@ def prediction_history(request):
 				current += timedelta(days=1)
 
 		for key in keys:
-			label = datetime.strptime(key, '%Y-%m').strftime('%b') if bucket_mode == 'month' else datetime.strptime(key, '%Y-%m-%d').strftime('%b %d' if days > 31 else '%a')
+			label = datetime.strptime(key, '%Y-%m').strftime('%b %y' if window['range_param'] == 'all' else '%b') if bucket_mode == 'month' else datetime.strptime(key, '%Y-%m-%d').strftime('%b %d' if days > 31 else '%a')
 			items = day_buckets[key]
 			confidences = [float(obj.confidence) * 100 for obj in items if obj.confidence is not None]
 			series.append({
@@ -1031,11 +1221,12 @@ def disease_recommendation(request):
 	if confidence is not None and (not math.isfinite(confidence) or not 0 <= confidence <= 100):
 		return Response({'error': 'confidence must be between 0 and 100'}, status=400)
 
-	latest = current_reading(SensorReading.objects.order_by('-received_at').first())
+	latest = current_reading(SensorReading.objects.exclude(device_id='temporary-simulator').order_by('-received_at').first())
 	environment = {
 		'temperature': latest.temperature if latest else None,
 		'humidity': latest.humidity if latest else None,
 		'rainfall': None,  # The device rain field is not a calibrated millimeter measurement.
+		'rain_detected': _stable_rain_status(latest),
 		'soil_moisture': latest.moisture_pct if latest else None,
 		'wind_speed': None,
 		'leaf_wetness': None,
@@ -1500,7 +1691,11 @@ def predict_rambutan(request):
     raw_label = rambutan_classes[idx] if idx < len(rambutan_classes) else str(idx)
     label = _normalize_rambutan_label(raw_label)
     threshold = RAMBUTAN_BINARY_CONF_THRESHOLD if len(rambutan_classes) == 2 else RAMBUTAN_CONF_THRESHOLD
-    if conf < threshold or raw_label.lower() == 'not_rambutan':
+    if (
+        conf < threshold
+        or raw_label.lower() == 'not_rambutan'
+        or label not in ('mature', 'immature')
+    ):
         rejected_label = 'not_rambutan' if raw_label.lower() == 'not_rambutan' else 'unknown'
         return Response({
             'type': 'rambutan', 'label': rejected_label,
@@ -1514,13 +1709,40 @@ def predict_rambutan(request):
         })
 
     user_obj = request.user if request.user.is_authenticated else None
+    image_name = getattr(img_file, 'name', '') or ''
+    saved_image_name = None
+    if user_obj is not None:
+        image_buffer = io.BytesIO()
+        img.save(image_buffer, format='JPEG', quality=90, optimize=True)
+        try:
+            saved_image_name = default_storage.save(
+                f'maturity_assessments/{uuid.uuid4().hex}.jpg',
+                ContentFile(image_buffer.getvalue()),
+            )
+        except OSError:
+            logger.exception('Could not store maturity assessment image')
+            return Response({
+                'error': 'Could not save this maturity assessment image.',
+                'code': 'maturity_image_storage_failed',
+            }, status=503)
+        image_name = saved_image_name
+
     storage = save_prediction(
         user=user_obj, prediction_type='rambutan', label=label, confidence=conf,
-        image_name=getattr(img_file, 'name', '') or '', raw_probs=json.dumps(probs.tolist()),
+        image_name=image_name, raw_probs=json.dumps(probs.tolist()),
     )
+    if saved_image_name and not storage.get('saved'):
+        default_storage.delete(saved_image_name)
+
+    classification = 'ripe' if label == 'mature' else 'unripe'
 
     return Response({
         'type': 'rambutan', 'label': label, 'rambutan_verified': True,
+        'classification': classification,
+        'image_url': (
+            f"/api/predictions/{storage['prediction_id']}/image/"
+            if user_obj is not None and storage.get('saved') else None
+        ),
         'storage': storage,
         'confidence': conf, 'raw_probs': probs.tolist(), 'class_names': rambutan_classes,
         'message': f'Rambutan detected as {label} with {conf * 100:.1f}% confidence',
@@ -1656,11 +1878,7 @@ def _weather_response(payload, status=200):
 
 def _forecast_coverage(payload, days):
 	from zoneinfo import ZoneInfo
-	try:
-		local_zone = ZoneInfo(payload.get('resolved_location', {}).get('timezone') or 'UTC')
-	except (KeyError, ValueError):
-		local_zone = timezone.get_default_timezone()
-	today = timezone.now().astimezone(local_zone).date()
+	today = timezone.now().astimezone(ZoneInfo(FARM_WEATHER_TIMEZONE)).date()
 	expected_dates = [(today + timedelta(days=index)).isoformat() for index in range(days)]
 	available = {day.get('date'): day for day in payload.get('forecast', [])}
 	payload['forecast'] = [available[date] for date in expected_dates if date in available]
@@ -1704,6 +1922,12 @@ def _weather_cache_response(q, days, error_message):
 		}, status=502)
 
 	payload = dict(cached.payload or {})
+	if payload.get('current_provider') != 'open_meteo' or payload.get('forecast_provider') != 'open_meteo':
+		return _weather_response({
+			'ok': False,
+			'error': str(error_message),
+			'cache_available': False,
+		}, status=502)
 	payload['ok'] = True
 	payload['source'] = 'cache'
 	payload['stale'] = True
@@ -1714,11 +1938,7 @@ def _weather_cache_response(q, days, error_message):
 
 	if isinstance(payload.get('forecast'), list):
 		from zoneinfo import ZoneInfo
-		try:
-			local_zone = ZoneInfo(payload.get('resolved_location', {}).get('timezone') or 'UTC')
-		except (KeyError, ValueError):
-			local_zone = timezone.get_default_timezone()
-		today = timezone.now().astimezone(local_zone).date().isoformat()
+		today = timezone.now().astimezone(ZoneInfo(FARM_WEATHER_TIMEZONE)).date().isoformat()
 		payload['forecast'] = [day for day in payload['forecast'] if day.get('date', '') >= today][:days]
 
 	return _weather_response(_forecast_coverage(payload, days))
@@ -1726,18 +1946,7 @@ def _weather_cache_response(q, days, error_message):
 
 def _open_meteo_condition(weather_code):
 	"""Convert Open-Meteo WMO weather codes into the condition text used by the UI."""
-	codes = {
-		0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
-		45: 'Fog', 48: 'Depositing rime fog', 51: 'Light drizzle',
-		53: 'Moderate drizzle', 55: 'Dense drizzle', 56: 'Freezing drizzle',
-		57: 'Freezing drizzle', 61: 'Light rain', 63: 'Rain', 65: 'Heavy rain',
-		66: 'Freezing rain', 67: 'Heavy freezing rain', 71: 'Light snow',
-		73: 'Snow', 75: 'Heavy snow', 77: 'Snow grains', 80: 'Rain showers',
-		81: 'Rain showers', 82: 'Heavy rain showers', 85: 'Snow showers',
-		86: 'Heavy snow showers', 95: 'Thunderstorm', 96: 'Thunderstorm with hail',
-		99: 'Heavy thunderstorm with hail',
-	}
-	return codes.get(int(weather_code), 'Unknown') if weather_code is not None else 'Unknown'
+	return condition_for_code(weather_code)
 
 
 @api_view(['GET'])
@@ -1811,10 +2020,10 @@ def weather(request):
 			**({'apikey': open_meteo_key} if open_meteo_key else {}),
 			'latitude': latitude,
 			'longitude': longitude,
-			'current': 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m',
-			'hourly': 'temperature_2m,precipitation_probability,rain,weather_code',
-			'daily': 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,uv_index_max',
-			'timezone': 'auto',
+			'current': 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,rain,is_day,precipitation,cloud_cover',
+			'hourly': 'temperature_2m,precipitation_probability,rain,precipitation,weather_code',
+			'daily': 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,rain_sum,precipitation_probability_max,wind_speed_10m_max,uv_index_max,sunrise,sunset,daylight_duration,sunshine_duration,precipitation_hours',
+			'timezone': FARM_WEATHER_TIMEZONE,
 			'forecast_days': days,
 		}, timeout=15)
 		if not response.ok:
@@ -1840,6 +2049,13 @@ def weather(request):
 				values = daily.get(name) or []
 				return measurement(values[i] if i < len(values) else None)
 
+			def daily_time(name):
+				values = daily.get(name) or []
+				value = values[i] if i < len(values) else None
+				if value is not None and not isinstance(value, str):
+					raise ValueError('Invalid weather time')
+				return value
+
 			weather_code = daily_value('weather_code')
 			forecast.append({
 				'dayIndex': i,
@@ -1851,13 +2067,23 @@ def weather(request):
 				},
 				'condition': _open_meteo_condition(weather_code),
 				'rainfall': rounded(daily_value('precipitation_sum'), 1),
+				'rainSum': rounded(daily_value('rain_sum'), 1),
+				'precipitationSum': rounded(daily_value('precipitation_sum'), 1),
+				'precipitationHours': rounded(daily_value('precipitation_hours'), 1),
 				'rainChance': rounded(daily_value('precipitation_probability_max')),
 				'wind': rounded(daily_value('wind_speed_10m_max')),
 				'uv': daily_value('uv_index_max'),
 				'weatherCode': weather_code,
+				'sunrise': daily_time('sunrise'),
+				'sunset': daily_time('sunset'),
+				'daylightDuration': rounded(daily_value('daylight_duration')),
+				'sunshineDuration': rounded(daily_value('sunshine_duration')),
 			})
 
 		current = data.get('current') or {}
+		current_is_day = measurement(current.get('is_day'))
+		if current_is_day is not None and current_is_day not in (0, 1):
+			raise ValueError('Invalid daylight status')
 		current_weather = {
 			'temp': round(measurement(current.get('temperature_2m'), required=True)),
 			'condition': _open_meteo_condition(current.get('weather_code')),
@@ -1865,6 +2091,11 @@ def weather(request):
 			'wind': rounded(current.get('wind_speed_10m')),
 			'feelslike': rounded(current.get('apparent_temperature')),
 			'uv': None,
+			'rain': rounded(current.get('rain'), 1),
+			'precipitation': rounded(current.get('precipitation'), 1),
+			'isDay': None if current_is_day is None else bool(current_is_day),
+			'cloudCover': rounded(current.get('cloud_cover')),
+			'weatherCode': measurement(current.get('weather_code')),
 			'last_updated': current.get('time'),
 		}
 
@@ -1872,7 +2103,7 @@ def weather(request):
 		hourly_forecast = []
 		hourly_times = hourly_data.get('time') or []
 		from zoneinfo import ZoneInfo
-		local_now = timezone.now().astimezone(ZoneInfo(data.get('timezone') or 'UTC')).strftime('%Y-%m-%dT%H:00')
+		local_now = timezone.now().astimezone(ZoneInfo(FARM_WEATHER_TIMEZONE)).strftime('%Y-%m-%dT%H:00')
 		start_index = next((index for index, value in enumerate(hourly_times) if value >= local_now), len(hourly_times))
 		for i in range(start_index, min(start_index + 13, len(hourly_times))):
 			hour_string = hourly_times[i]
@@ -1892,6 +2123,7 @@ def weather(request):
 				'condition': _open_meteo_condition(hourly_weather_code),
 				'rainChance': rounded(hourly_value('precipitation_probability')),
 				'rain': rounded(hourly_value('rain'), 1),
+				'precipitation': rounded(hourly_value('precipitation'), 1),
 				'weatherCode': hourly_weather_code,
 			})
 
@@ -1902,6 +2134,22 @@ def weather(request):
 			'lat': latitude,
 			'lon': longitude,
 		}
+		logger.info(
+			'Open-Meteo weather: coordinates=(%s, %s), timezone=%s, '
+			'current_weather_code=%s, current_condition=%s, daily=%s',
+			latitude, longitude, FARM_WEATHER_TIMEZONE,
+			current_weather['weatherCode'], current_weather['condition'],
+			[
+				{
+					'date': day['date'],
+					'weather_code': day['weatherCode'],
+					'rainfall_mm': day['rainSum'],
+					'precipitation_probability_max': day['rainChance'],
+					'precipitation_hours': day['precipitationHours'],
+				}
+				for day in forecast[:7]
+			],
+		)
 
 		payload = {
 			'ok': True,
@@ -1917,7 +2165,7 @@ def weather(request):
 				'country': location_info.get('country'),
 				'lat': location_info.get('lat'),
 				'lon': location_info.get('lon'),
-				'timezone': data.get('timezone') or 'UTC',
+				'timezone': FARM_WEATHER_TIMEZONE,
 			},
 			'forecast': forecast,
 			'current': current_weather,

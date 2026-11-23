@@ -1,26 +1,36 @@
 // Simple harvest guidance, not measurements inferred from a photo.
 // Sources: https://www.fao.org/4/ad523e/ad523e04.htm
 // https://www.ctahr.hawaii.edu/oc/freepubs/pdf/F_N-33.pdf
+export const FARM_HARVEST_REFERENCE = {
+  harvestSeason: 'September–October',
+  floweringPeriod: 'July',
+  reportedCycleMonths: 8,
+};
+
 export function maturityAdvice(readiness, language = 'en') {
   const tl = language === 'tl';
   if (readiness === 'immature') return {
     readiness,
-    stage: tl ? 'Hindi pa hinog' : 'Not yet ripe',
-    description: tl ? 'Mukhang hindi pa hinog ang rambutan. Huwag munang anihin.' : 'The rambutan looks unripe. Leave it on the tree for now.',
-    action: tl ? 'Maghintay muna' : 'Wait before picking',
+    stage: tl ? 'Hindi pa hinog' : 'Unripe',
+    description: tl
+      ? 'Hindi pa hinog ang nasuring bunga. Patuloy itong subaybayan at huwag munang anihin.'
+      : 'The photographed fruit is classified as unripe. Continue monitoring it on the tree.',
+    action: tl ? 'Patuloy na subaybayan' : 'Continue monitoring',
     harvestingTips: tl
-      ? ['Iwan muna sa puno ang bunga.', 'Tingnan ulit bukas kung nagbago ang kulay.', 'Hintaying maging hinog ang kulay na karaniwan sa iyong uri ng rambutan.']
-      : ['Leave the fruit on the tree.', 'Check its color again tomorrow.', 'Wait for the usual ripe color of your rambutan variety.'],
+      ? ['Patuloy na subaybayan ang bungang ito.', 'Iwan muna ito sa puno.', 'Tingnan muli kung nagbago ang kulay.']
+      : ['Continue monitoring this fruit.', 'Leave it on the tree for now.', 'Check again for a change in color.'],
     storageAdvice: [],
   };
   if (readiness === 'mature') return {
     readiness,
-    stage: tl ? 'Mukhang hinog na' : 'Looks ripe',
-    description: tl ? 'Mukhang hinog na ang rambutan. Tingnan muna ang bunga bago anihin.' : 'The rambutan looks ripe. Check the fruit before picking.',
-    action: tl ? 'Suriin bago anihin' : 'Check before picking',
+    stage: tl ? 'Hinog' : 'Ripe',
+    description: tl
+      ? 'Hinog ang nasuring bunga. Suriin muna ito bago anihin; ang resulta ay para lamang sa bungang nasa larawan.'
+      : 'The photographed fruit is classified as ripe. Inspect the fruit for harvesting; this result applies only to the pictured fruit.',
+    action: tl ? 'Suriin bago anihin' : 'Inspect for harvesting',
     harvestingTips: tl
-      ? ['Tiyaking hinog ang kulay para sa iyong uri ng rambutan.', 'Gupitin ang tangkay gamit ang malinis na gunting.', 'Dahan-dahang ilagay sa malinis na lalagyan. Huwag ihagis.']
-      : ['Check that the color is right for your rambutan variety.', 'Cut the stem with clean clippers.', 'Place the fruit gently in a clean container. Do not throw it.'],
+      ? ['Suriin ang bunga kung maaari na itong anihin.', 'Tiyaking ang kulay ay tama para sa iyong uri ng rambutan.', 'Gupitin ang tangkay gamit ang malinis na gunting.']
+      : ['Inspect the fruit for harvesting.', 'Check that its color is right for your rambutan variety.', 'Cut the stem with clean clippers.'],
     storageAdvice: tl
       ? ['Ilagay sa lilim at malamig na lugar.', 'Huwag patungan ng mabibigat na bagay.', 'Ihiwalay ang mga bulok o sirang bunga.']
       : ['Keep the fruit in a cool, shaded place.', 'Keep heavy items off the fruit.', 'Separate rotten or damaged fruit.'],

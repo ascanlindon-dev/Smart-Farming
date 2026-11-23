@@ -3,13 +3,12 @@ import { useState, useEffect } from "react";
 import { useContext } from 'react';
 import { toast } from 'sonner';
 import { LanguageContext } from '../LanguageContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import GoogleSignInButton from "./GoogleSignInButton";
-import { Eye, EyeOff, Leaf } from "lucide-react";
-import rambutanImage from "figma:asset/a8803903c13af0b87fc355b5d6d1dbf82a50518f.png";
+import { Eye, EyeOff } from "lucide-react";
+import AuthShell from "./AuthShell";
 
 export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
   const [identifier, setIdentifier] = useState(""); // email or mobile
@@ -18,7 +17,7 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const { language } = useContext(LanguageContext);
+  const { language, changeLanguage } = useContext(LanguageContext);
   const [backendUp, setBackendUp] = useState(true);
 
   // OTP verification step (sent to the account's Gmail address)
@@ -58,7 +57,7 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
     const pw = password;
     setIsSigningIn(true);
     const controller = new AbortController();
-    const requestTimeout = setTimeout(() => controller.abort(), 10000);
+    const requestTimeout = setTimeout(() => controller.abort(), 30000);
 
     const url = '/api/login/';
     try {
@@ -149,7 +148,7 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
     setError("");
     setIsSigningIn(true);
     const controller = new AbortController();
-    const requestTimeout = setTimeout(() => controller.abort(), 10000);
+    const requestTimeout = setTimeout(() => controller.abort(), 30000);
     try {
       const res = await apiFetch('/api/auth/google/', {
         method: 'POST',
@@ -201,206 +200,165 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-amber-50 flex items-center justify-center p-4 overflow-hidden relative">
-      {/* Unified Decorative elements */}
-      <div className="absolute top-10 right-1/4 w-80 h-80 bg-emerald-300 rounded-full blur-3xl opacity-20 sm:w-96 sm:h-96"></div>
-      <div className="absolute bottom-10 left-1/4 w-64 h-64 bg-amber-300 rounded-full blur-3xl opacity-20 sm:w-80 sm:h-80"></div>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-emerald-200 rounded-full blur-3xl opacity-10 sm:w-[600px] sm:h-[600px]"></div>
-
-      {/* Slanted Rambutan Image - Upper Right Corner Design */}
-      <div className="absolute top-0 right-0 z-0 pointer-events-none overflow-hidden">
-        <div className="transform rotate-[15deg] origin-top-right translate-x-8 -translate-y-4">
-          <img
-            src={rambutanImage}
-            alt="Rambutan fruits"
-            className="w-[200px] sm:w-[280px] md:w-[320px] lg:w-[400px] xl:w-[480px] h-auto object-contain drop-shadow-2xl opacity-90"
-          />
-        </div>
-      </div>
-
-      <div className="w-full max-w-md relative z-10">
-        {/* Login Form */}
-        <div className="w-full">
-          {/* Logo and Title */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 rounded-2xl mb-4 shadow-lg">
-              <Leaf className="w-8 h-8 text-white" />
+    <AuthShell language={language} onLanguageChange={changeLanguage}>
+      {stage === 'otp' ? (
+        <div className="space-y-5">
+          <div>
+            <h1 className="text-[26px] font-extrabold tracking-tight text-stone-900 sm:text-3xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {language === 'tl' ? 'Tingnan ang iyong email' : 'Check your email'}
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-stone-600">
+              {otpInfo || `We sent a verification code to ${otpEmail}.`}
+            </p>
+          </div>
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="otpCode" className="text-sm font-bold text-stone-800">
+                {language === 'tl' ? 'Verification Code' : 'Verification Code'}
+              </Label>
+              <Input
+                id="otpCode"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="6-digit code"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ""))}
+                autoComplete="one-time-code"
+                className="min-h-[50px] rounded-2xl border-2 border-[#D6D3CD] bg-white px-4 text-base focus-visible:ring-emerald-700"
+                required
+              />
             </div>
-            <h1 className="brand-wordmark mb-2 text-emerald-800">RAMBUTECH</h1>
-            <p className="text-slate-600 mb-8">Farm Resilience & Disease Detection</p>
+            <Button
+              type="submit"
+              disabled={verifyingOtp}
+              className="min-h-[52px] w-full rounded-2xl bg-[#14532D] text-base font-bold text-white shadow-lg hover:bg-[#0F3F22]"
+            >
+              {verifyingOtp ? 'Verifying...' : (language === 'tl' ? 'I-verify ang Code' : 'Verify Code')}
+            </Button>
+            {otpError && <p role="alert" className="text-sm text-red-700">{otpError}</p>}
+          </form>
+          <div className="space-y-3 text-center">
+            <p className="text-sm text-stone-600">
+              {language === 'tl' ? 'Walang natanggap na code?' : "Didn't get a code?"}{' '}
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0 || resendingOtp}
+                className="font-bold text-[#14532D] hover:underline disabled:cursor-not-allowed disabled:text-stone-400"
+              >
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : (language === 'tl' ? 'Ipadala muli' : 'Resend code')}
+              </button>
+            </p>
+            <button type="button" onClick={() => { setStage('credentials'); setError(''); setOtpError(''); }} className="min-h-11 rounded-lg px-3 text-sm font-bold text-stone-600 hover:bg-stone-100">
+              {language === 'tl' ? 'Bumalik sa pag-sign in' : 'Back to sign in'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="mb-6">
+            <h1 className="text-2xl font-extrabold tracking-tight text-stone-900 sm:text-3xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {language === 'tl' ? 'Maligayang Pagbabalik' : 'Welcome Back'}
+            </h1>
+            <p className="mt-2 text-[15px] text-stone-600">
+              {language === 'tl' ? 'Mag-sign in para tingnan ang iyong rambutan farm.' : 'Sign in to check your rambutan trees.'}
+            </p>
           </div>
 
-          {/* Login Form - No Card */}
-          <div className="max-w-md mx-auto">
-            {stage === "otp" ? (
-              <>
-                <div className="text-center mb-6">
-                  <h2 className="text-emerald-800 mb-2">Check your email</h2>
-                  <p className="text-slate-600">{otpInfo || `We sent a verification code to ${otpEmail}.`}</p>
-                </div>
-                <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="otpCode">Verification Code</Label>
-                    <Input
-                      id="otpCode"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="6-digit code"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ""))}
-                      autoComplete="one-time-code"
-                      required
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={verifyingOtp}
-                    className="w-full bg-gradient-to-r from-emerald-700 via-teal-600 to-green-600 hover:opacity-90 text-white shadow-md"
-                  >
-                    {verifyingOtp ? "Verifying..." : "Verify Code"}
-                  </Button>
-                  {otpError && (
-                    <p className="text-red-600 text-sm text-center mt-2">{otpError}</p>
-                  )}
-                </form>
-
-                <div className="mt-6 text-center space-y-2">
-                  <p className="text-sm text-slate-600">
-                    Didn't get a code?{" "}
-                    <button
-                      onClick={handleResendOtp}
-                      disabled={resendCooldown > 0 || resendingOtp}
-                      className={`font-semibold transition ${
-                        resendCooldown > 0
-                          ? "text-slate-400 cursor-not-allowed"
-                          : "text-emerald-700 hover:text-emerald-800"
-                      }`}
-                    >
-                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
-                    </button>
-                  </p>
-                  <button
-                    onClick={() => { setStage("credentials"); setError(""); setOtpError(""); }}
-                    className="text-sm text-slate-500 hover:text-slate-700"
-                  >
-                    Back to sign in
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-            <div className="text-center mb-6">
-              <h2 className="text-emerald-800 mb-2">Welcome Back</h2>
-              <p className="text-slate-600">{language === 'tl' ? 'Mag-sign in gamit ang Google o ang iyong email at password.' : 'Choose Google or sign in with your email and password.'}</p>
+          {!backendUp && (
+            <div role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-800">
+              <strong>Service temporarily unavailable.</strong>
+              <span className="ml-1">{language === 'tl' ? 'Hindi makakonekta sa server. I-refresh ang page at subukan muli.' : 'We could not connect to the server. Please refresh the page and try again.'}</span>
             </div>
-              {!backendUp && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
-                  <strong>Service temporarily unavailable.</strong>
-                  <div className="mt-2 text-sm">We could not connect to the server. Please refresh the page and try again.</div>
-                </div>
-              )}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="identifier">Email Address</Label>
+          )}
+
+          <GoogleSignInButton onCredential={handleGoogleSignIn} disabled={isSigningIn} />
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-[#D6D3CD]" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-stone-600">{language === 'tl' ? 'o gamitin ang email' : 'or use email'}</span>
+            <span className="h-px flex-1 bg-[#D6D3CD]" />
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="identifier" className="text-sm font-bold text-stone-800">
+                {language === 'tl' ? 'Email Address' : 'Email Address'}
+              </Label>
+              <Input
+                id="identifier"
+                type="email"
+                placeholder="farmer@example.com"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                autoComplete="email"
+                className="min-h-[50px] rounded-xl border border-[#D6D3CD] bg-white px-4 text-[15px] focus-visible:border-[#14532D] focus-visible:ring-4 focus-visible:ring-emerald-600/20"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="password" className="text-sm font-bold text-stone-800">
+                  {language === 'tl' ? 'Password' : 'Password'}
+                </Label>
+                <button type="button" onClick={onSwitchToForgot} className="min-h-8 rounded px-1 text-xs font-bold text-[#14532D] hover:underline sm:text-sm">
+                  {language === 'tl' ? 'Nakalimutan ang password?' : 'Forgot password?'}
+                </button>
+              </div>
+              <div className="relative">
                 <Input
-                  id="identifier"
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  autoComplete="email"
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="min-h-[50px] rounded-xl border border-[#D6D3CD] bg-white px-4 pr-14 text-[15px] focus-visible:border-[#14532D] focus-visible:ring-4 focus-visible:ring-emerald-600/20"
                   required
                 />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <button
-                    type="button"
-                    onClick={onSwitchToForgot}
-                    className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                    className="pr-12"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((visible) => !visible)}
-                    className="absolute flex items-center justify-center text-slate-500 hover:text-emerald-700"
-                    style={{ top: "50%", right: "0.5rem", width: "2rem", height: "2rem", transform: "translateY(-50%)" }}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    title={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 accent-emerald-700"
-                />
-                Remember me on this device
-              </label>
-
-              <Button
-                type="submit"
-                disabled={isSigningIn}
-                className="w-full bg-gradient-to-r from-emerald-700 via-teal-600 to-green-600 hover:opacity-90 text-white shadow-md"
-              >
-                {isSigningIn ? "Signing in..." : "Sign In"}
-              </Button>
-              {error && (
-                <p role="alert" className="text-red-600 text-sm text-center mt-2">{error}</p>
-              )}
-
-            </form>
-
-            <div className="my-4 flex items-center gap-3 text-sm text-slate-500">
-              <span className="h-px flex-1 bg-slate-300" />
-              <span>{language === 'tl' ? 'o' : 'or'}</span>
-              <span className="h-px flex-1 bg-slate-300" />
-            </div>
-            <GoogleSignInButton onCredential={handleGoogleSignIn} disabled={isSigningIn} />
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-slate-600">
-                Don't have an account?{" "}
                 <button
-                  onClick={onSwitchToSignup}
-                  className="text-emerald-700 hover:text-emerald-800 font-semibold"
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-stone-600 hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#14532D]"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                 >
-                  Sign up
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
-              </p>
+              </div>
             </div>
-              </>
-            )}
 
-            {/* Info Text */}
-            <p className="text-center text-sm text-slate-500 mt-6">
-              Smart farming solutions for rambutan cultivation
+            <label className="inline-flex min-h-11 cursor-pointer select-none items-center gap-3 py-1 text-sm font-medium text-stone-800">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-6 w-6 rounded-lg accent-[#14532D] focus:ring-2 focus:ring-[#14532D]"
+              />
+              {language === 'tl' ? 'Manatiling naka-sign in sa cellphone na ito' : 'Keep me signed in on this phone'}
+            </label>
+
+            {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+            <Button
+              type="submit"
+              disabled={isSigningIn}
+              className="min-h-[52px] w-full rounded-xl bg-[#14532D] text-[15px] font-bold text-white shadow-lg shadow-emerald-950/20 hover:bg-[#0F3F22] disabled:opacity-60"
+            >
+              {isSigningIn ? (language === 'tl' ? 'Nag-si-sign in...' : 'Signing in...') : (language === 'tl' ? 'Mag-sign In' : 'Sign In')}
+            </Button>
+          </form>
+
+          <div className="mt-6 border-t border-stone-200 pt-4 text-center">
+            <p className="text-sm text-stone-600">
+              {language === 'tl' ? 'Wala pang account?' : "Don't have an account?"}{' '}
+              <button type="button" onClick={onSwitchToSignup} className="min-h-10 rounded-lg px-2 font-bold text-[#14532D] hover:underline">
+                {language === 'tl' ? 'Gumawa ng Account' : 'Create Account'}
+              </button>
             </p>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </AuthShell>
   );
 }

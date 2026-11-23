@@ -1,4 +1,4 @@
-"""Extend a short WeatherAPI forecast using the same resolved coordinates."""
+"""Open-Meteo helpers for extended daily forecasts."""
 from datetime import datetime, timedelta
 import math
 import os
@@ -14,40 +14,53 @@ class ForecastUnavailable(RuntimeError):
 
 # WMO weather interpretation codes used by Open-Meteo.
 CONDITIONS = {
-    0: ('Clear sky', '\u2600\ufe0f'),
-    1: ('Mainly clear', '\U0001f324\ufe0f'),
-    2: ('Partly cloudy', '\u26c5'),
+    0: ('Clear Sky', '\u2600\ufe0f'),
+    1: ('Mainly Clear', '\U0001f324\ufe0f'),
+    2: ('Partly Cloudy', '\u26c5'),
     3: ('Overcast', '\u2601\ufe0f'),
     45: ('Fog', '\U0001f32b\ufe0f'),
-    48: ('Freezing fog', '\U0001f32b\ufe0f'),
-    51: ('Light drizzle', '\U0001f326\ufe0f'),
-    53: ('Moderate drizzle', '\U0001f326\ufe0f'),
-    55: ('Dense drizzle', '\U0001f327\ufe0f'),
-    56: ('Light freezing drizzle', '\U0001f327\ufe0f'),
-    57: ('Dense freezing drizzle', '\U0001f327\ufe0f'),
-    61: ('Light rain', '\U0001f327\ufe0f'),
-    63: ('Moderate rain', '\U0001f327\ufe0f'),
-    65: ('Heavy rain', '\U0001f327\ufe0f'),
-    66: ('Light freezing rain', '\U0001f327\ufe0f'),
-    67: ('Heavy freezing rain', '\U0001f327\ufe0f'),
-    71: ('Light snow', '\U0001f328\ufe0f'),
-    73: ('Moderate snow', '\U0001f328\ufe0f'),
-    75: ('Heavy snow', '\U0001f328\ufe0f'),
-    77: ('Snow grains', '\U0001f328\ufe0f'),
-    80: ('Light rain showers', '\U0001f326\ufe0f'),
-    81: ('Moderate rain showers', '\U0001f327\ufe0f'),
-    82: ('Heavy rain showers', '\U0001f327\ufe0f'),
-    85: ('Light snow showers', '\U0001f328\ufe0f'),
-    86: ('Heavy snow showers', '\U0001f328\ufe0f'),
+    48: ('Fog', '\U0001f32b\ufe0f'),
+    51: ('Drizzle', '\U0001f326\ufe0f'),
+    53: ('Drizzle', '\U0001f326\ufe0f'),
+    55: ('Drizzle', '\U0001f327\ufe0f'),
+    56: ('Freezing Drizzle', '\U0001f327\ufe0f'),
+    57: ('Freezing Drizzle', '\U0001f327\ufe0f'),
+    61: ('Rain', '\U0001f327\ufe0f'),
+    63: ('Rain', '\U0001f327\ufe0f'),
+    65: ('Rain', '\U0001f327\ufe0f'),
+    66: ('Freezing Rain', '\U0001f327\ufe0f'),
+    67: ('Freezing Rain', '\U0001f327\ufe0f'),
+    71: ('Snow', '\U0001f328\ufe0f'),
+    73: ('Snow', '\U0001f328\ufe0f'),
+    75: ('Snow', '\U0001f328\ufe0f'),
+    77: ('Snow', '\U0001f328\ufe0f'),
+    80: ('Rain Showers', '\U0001f326\ufe0f'),
+    81: ('Rain Showers', '\U0001f327\ufe0f'),
+    82: ('Rain Showers', '\U0001f327\ufe0f'),
+    85: ('Snow Showers', '\U0001f328\ufe0f'),
+    86: ('Snow Showers', '\U0001f328\ufe0f'),
     95: ('Thunderstorm', '\u26c8\ufe0f'),
-    96: ('Thunderstorm with light hail', '\u26c8\ufe0f'),
-    99: ('Thunderstorm with heavy hail', '\u26c8\ufe0f'),
+    96: ('Thunderstorm', '\u26c8\ufe0f'),
+    99: ('Thunderstorm', '\u26c8\ufe0f'),
 }
 DAILY_FIELDS = (
     'weather_code', 'temperature_2m_max', 'temperature_2m_min',
-    'precipitation_sum', 'wind_speed_10m_max', 'uv_index_max',
+    'rain_sum', 'precipitation_sum', 'precipitation_probability_max',
+    'precipitation_hours', 'wind_speed_10m_max', 'uv_index_max',
     'relative_humidity_2m_mean',
 )
+
+
+def condition_for_code(weather_code):
+    if isinstance(weather_code, bool):
+        return 'Unknown'
+    try:
+        code = int(weather_code)
+    except (TypeError, ValueError):
+        return 'Unknown'
+    if isinstance(weather_code, float) and not weather_code.is_integer():
+        return 'Unknown'
+    return CONDITIONS.get(code, ('Unknown', '\u2601\ufe0f'))[0]
 
 
 def fetch_extended_forecast(location, days):
@@ -93,6 +106,10 @@ def fetch_extended_forecast(location, days):
             'date': date, 'condition': condition, 'icon': icon,
             'temperature': {'max': number('temperature_2m_max', index),
                             'min': number('temperature_2m_min', index)},
+            'rainSum': number('rain_sum', index, 1),
+            'precipitationSum': number('precipitation_sum', index, 1),
+            'rainChance': number('precipitation_probability_max', index),
+            'precipitationHours': number('precipitation_hours', index, 1),
             'rainfall': number('precipitation_sum', index, 1),
             'wind': number('wind_speed_10m_max', index),
             'humidity': number('relative_humidity_2m_mean', index),

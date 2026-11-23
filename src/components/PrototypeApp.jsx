@@ -3,6 +3,7 @@ import { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { LanguageContext } from '../LanguageContext';
 import { sensorSnapshot } from '../lib/sensorReadings.mjs';
 import { translations } from '../translation';
+import ConsentSettings from './ConsentSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import EnvironmentalMonitoring from './EnvironmentalMonitoring';
 import WeatherAlerts from './WeatherAlerts';
@@ -12,35 +13,15 @@ import HistoricalData from './HistoricalData';
 import FarmDashboard from './FarmDashboard';
 import { Toaster } from './ui/sonner';
 import { toast } from 'sonner';
-import { Leaf, CloudRain, Activity, BarChart3, LayoutDashboard, User, LogOut, Edit, Globe, Bell, KeyRound, MapPin, Save, X, Camera, Menu } from 'lucide-react';
+import { Leaf, CloudRain, Activity, BarChart3, LayoutDashboard, User, LogOut, Edit, Globe, Bell, KeyRound, MapPin, Save, X, Camera, Menu, ScanLine, Sprout } from 'lucide-react';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import appLogo from '../assets/app-logo.png';
 import { Activity3D, Analytics3D, Leaf3D, Rambutan3D, RainCloud3D } from './Environmental3DIcons';
 
-const DEFAULT_WEATHER_QUERY = 'Victoria, Oriental Mindoro, Philippines';
 const ACTIVE_TAB_STORAGE_KEY = 'prototype_active_tab';
 const DISMISSED_NOTIFICATION_STORAGE_KEY = 'dismissed_notification_ids';
 const DEFAULT_PROFILE_AVATAR = 'https://api.dicebear.com/10.x/avataaars/svg';
-
-const resolveWeatherQuery = async (fallbackQuery = DEFAULT_WEATHER_QUERY) => {
-  if (typeof navigator !== 'undefined' && navigator.geolocation) {
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 600000,
-        });
-      });
-      return `${position.coords.latitude},${position.coords.longitude}`;
-    } catch (error) {
-      // Fall back to the default city when geolocation is denied or unavailable.
-    }
-  }
-
-  return fallbackQuery;
-};
 
 const appTabs = [
   { value: 'dashboard', icon: LayoutDashboard, color: 'emerald', labelKey: 'dashboard', sidebarLabel: 'Dashboard' },
@@ -472,13 +453,13 @@ const PrototypeApp = ({ onBack, currentUser }) => {
 
     const loadNotifications = async () => {
       try {
-        const weatherQuery = await resolveWeatherQuery(DEFAULT_WEATHER_QUERY);
-        const [weatherResponse, sensorResponse] = await Promise.all([
-          apiFetch(`/api/weather/?q=${encodeURIComponent(weatherQuery)}&days=2`),
-          apiFetch('/api/sensors/'),
-        ]);
+        const sensorRequest = apiFetch('/api/sensors/');
+        const weatherRequest = location.trim()
+          ? apiFetch(`/api/weather/?q=${encodeURIComponent(location.trim())}&days=2`)
+          : Promise.resolve(null);
+        const [weatherResponse, sensorResponse] = await Promise.all([weatherRequest, sensorRequest]);
 
-        const weatherData = weatherResponse.ok ? await weatherResponse.json().catch(() => null) : null;
+        const weatherData = weatherResponse?.ok ? await weatherResponse.json().catch(() => null) : null;
         const sensorData = sensorResponse.ok ? await sensorResponse.json().catch(() => null) : null;
 
         if (cancelled) return;
@@ -498,7 +479,7 @@ const PrototypeApp = ({ onBack, currentUser }) => {
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [language]);
+  }, [language, location]);
 
   const openNotification = (notification) => {
     if (isTabSwitchLocked && notification.tab !== activeTab) return;
@@ -562,8 +543,8 @@ const PrototypeApp = ({ onBack, currentUser }) => {
           : 'This was not identified as a rambutan. Tap to view details.')
       : isReady
         ? (language === 'tl'
-            ? 'Hinog na ang rambutan. Pindutin para makita ang detalye.'
-            : 'The rambutan is ready. Tap to view details.')
+            ? 'Hinog ang rambutan sa larawang sinuri. Pindutin para makita ang detalye.'
+            : 'The photographed rambutan was classified as ripe. Tap to view details.')
         : (language === 'tl'
             ? `${analysisResult?.stage || 'May result na'} ang natukoy. Pindutin para makita ang detalye.`
             : `${analysisResult?.stage || 'A result is ready'} was detected. Tap to view details.`);
@@ -585,8 +566,9 @@ const PrototypeApp = ({ onBack, currentUser }) => {
     let cancelled = false;
 
     const loadWeatherToast = async () => {
+      const weatherQuery = location.trim();
+      if (!weatherQuery) return;
       try {
-        const weatherQuery = await resolveWeatherQuery(DEFAULT_WEATHER_QUERY);
         const response = await apiFetch(`/api/weather/?q=${encodeURIComponent(weatherQuery)}&days=2`);
         if (!response.ok) return;
 
@@ -647,69 +629,110 @@ const PrototypeApp = ({ onBack, currentUser }) => {
     return () => {
       cancelled = true;
     };
-  }, [language]);
+  }, [language, location]);
 
   return (
-    <div className="min-h-screen bg-[#edf6f2] text-slate-800">
+    <div className={`min-h-screen ${activeTab === 'dashboard' || activeTab === 'monitoring' ? 'bg-[#FAF9F5] text-[#1C1917]' : 'bg-[#edf6f2] text-slate-800'}`}>
       <Toaster position="top-right" />
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="dashboard-shell bg-[#eef6f2]">
-        <aside className="dashboard-sidebar hidden flex-col bg-[#064a35] px-6 py-8 text-white">
-          <div className="mb-11">
-            <div className="flex items-center gap-2">
-              <img src={appLogo} alt="Rambutech" className="h-7 w-7 object-contain" />
-              <h1 className="font-bold tracking-[0.08em] text-emerald-300">RAMBUTECH</h1>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className={`dashboard-shell ${activeTab === 'dashboard' || activeTab === 'monitoring' ? 'bg-[#FAF9F5]' : 'bg-[#eef6f2]'}`}>
+        <aside className="dashboard-sidebar hidden flex-col bg-[#103F2B] px-4 py-6 text-white">
+          <div className="mb-8 border-b border-white/10 pb-6">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
+                <img src={appLogo} alt="Rambutech" className="h-7 w-7 object-contain" />
+              </span>
+              <h1 className="font-bold tracking-[0.08em] text-emerald-200">RAMBUTECH</h1>
             </div>
-            <p className="mt-1 text-[10px] font-semibold tracking-wide text-emerald-100/70">SMART FARMING SYSTEM</p>
+            <p className="ml-[52px] mt-1 text-[10px] font-medium tracking-wide text-emerald-100/65">SMART FARMING SYSTEM</p>
           </div>
-          <p className="mb-3 text-[10px] font-bold tracking-[0.14em] text-emerald-100/55">MAIN MODULES</p>
-          <TabsList ref={appTabsRef} className="flex h-auto w-full flex-col items-start gap-1 bg-transparent p-0">
+          <p className="mb-3 px-3 text-[10px] font-bold tracking-[0.14em] text-emerald-100/55">MAIN MODULES</p>
+          <TabsList ref={appTabsRef} className="flex h-auto w-full flex-col items-stretch gap-1 bg-transparent p-0">
             {appTabs.map((tab) => {
               const Icon = tab.icon;
               return <TabsTrigger key={tab.value} data-app-tab={tab.value} value={tab.value} disabled={isTabSwitchLocked && tab.value !== activeTab}
-                className="group flex h-auto w-fit max-w-full self-start justify-start gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-emerald-100/65 shadow-none transition hover:bg-white/10 hover:text-white data-[state=active]:bg-white/15 data-[state=active]:text-white data-[state=active]:shadow-none">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-emerald-200 group-data-[state=active]:text-emerald-300"><Icon className="size-7 block" /></span>
-                <span>{tab.sidebarLabel}</span>
-                {activeTab === tab.value && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400" />}
+                className="group flex min-h-12 w-full max-w-full items-center justify-start gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-emerald-100/70 shadow-none transition hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 data-[state=active]:border-white/10 data-[state=active]:bg-white/12 data-[state=active]:text-white data-[state=active]:shadow-none">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-emerald-200 group-data-[state=active]:text-emerald-300"><Icon className="size-5 block" aria-hidden="true" /></span>
+                <span className="min-w-0 flex-1 whitespace-normal leading-snug">{tab.sidebarLabel}</span>
+                {activeTab === tab.value && <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-300" />}
               </TabsTrigger>;
             })}
           </TabsList>
-          <button onClick={() => setShowAccountModal(true)} className="mt-auto flex items-center gap-3 rounded-xl p-2 text-left transition hover:bg-white/10">
-            <img src={farmer.photo || DEFAULT_PROFILE_AVATAR} alt="Farmer" className="h-9 w-9 rounded-full object-cover" />
-            <span><span className="block text-sm font-bold">{farmer.name}</span><span className="block text-xs text-emerald-100/65">Farmer</span></span>
+          <button onClick={() => setShowAccountModal(true)} className="mt-auto flex items-center gap-3 border-t border-white/10 px-2 pt-5 text-left transition">
+            <img src={farmer.photo || DEFAULT_PROFILE_AVATAR} alt="" className="h-10 w-10 rounded-full border border-white/15 object-cover" />
+            <span className="min-w-0"><span className="block truncate text-sm font-bold">{farmer.name}</span><span className="block text-xs text-emerald-100/65">Farmer · Account</span></span>
           </button>
         </aside>
 
         {mobileSidebarOpen && (
           <div className="dashboard-mobile-drawer fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Navigation menu">
             <button aria-label="Close menu" onClick={() => setMobileSidebarOpen(false)} className="absolute inset-0 h-full w-full bg-slate-950/45" />
-            <aside className="relative flex h-full w-[278px] flex-col bg-[#064a35] px-5 py-7 text-white shadow-2xl">
-              <div className="mb-10 flex items-start justify-between">
-                <div><div className="flex items-center gap-2"><img src={appLogo} alt="Rambutech" className="h-7 w-7 object-contain" /><h1 className="font-bold tracking-[.08em] text-emerald-300">RAMBUTECH</h1></div><p className="mt-1 text-[10px] font-semibold tracking-wide text-emerald-100/70">SMART FARMING SYSTEM</p></div>
+            <aside className="relative flex h-full w-[278px] flex-col bg-[#103F2B] px-4 py-6 text-white shadow-2xl">
+              <div className="mb-8 flex items-start justify-between border-b border-white/10 pb-6">
+                <div><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"><img src={appLogo} alt="Rambutech" className="h-7 w-7 object-contain" /></span><h1 className="font-bold tracking-[.08em] text-emerald-200">RAMBUTECH</h1></div><p className="ml-[52px] mt-1 text-[10px] font-medium tracking-wide text-emerald-100/65">SMART FARMING SYSTEM</p></div>
                 <button onClick={() => setMobileSidebarOpen(false)} aria-label="Close menu" className="rounded-lg p-2 text-emerald-100 hover:bg-white/10"><X className="h-5 w-5" /></button>
               </div>
-              <p className="mb-3 text-[10px] font-bold tracking-[.14em] text-emerald-100/55">MAIN MODULES</p>
-              <TabsList className="flex h-auto w-full flex-col items-start gap-1 bg-transparent p-0">
-                {appTabs.map((tab) => { const Icon = tab.icon; return <TabsTrigger key={tab.value} value={tab.value} onClick={() => setMobileSidebarOpen(false)} className="group flex h-auto w-fit max-w-full self-start justify-start gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-emerald-100/65 data-[state=active]:bg-white/15 data-[state=active]:text-white"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 p-0.5 text-emerald-100 opacity-100"><Icon className="size-7 block opacity-100" /></span><span>{tab.sidebarLabel}</span>{activeTab === tab.value && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400" />}</TabsTrigger>; })}
+              <p className="mb-3 px-3 text-[10px] font-bold tracking-[.14em] text-emerald-100/55">MAIN MODULES</p>
+              <TabsList className="flex h-auto w-full flex-col items-stretch gap-1 bg-transparent p-0">
+                {appTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return <TabsTrigger key={tab.value} value={tab.value} onClick={() => setMobileSidebarOpen(false)} className="group flex min-h-12 w-full max-w-full items-center justify-start gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-emerald-100/70 shadow-none transition hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 data-[state=active]:border-white/10 data-[state=active]:bg-white/12 data-[state=active]:text-white">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center text-emerald-200 group-data-[state=active]:text-emerald-300"><Icon className="size-5 block" aria-hidden="true" /></span>
+                    <span className="min-w-0 flex-1 whitespace-normal leading-snug">{tab.sidebarLabel}</span>
+                    {activeTab === tab.value && <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-300" />}
+                  </TabsTrigger>;
+                })}
               </TabsList>
-              <button onClick={() => { setMobileSidebarOpen(false); setShowAccountModal(true); }} className="mt-auto flex items-center gap-3 rounded-xl p-2 text-left hover:bg-white/10"><img src={farmer.photo || DEFAULT_PROFILE_AVATAR} alt="Farmer" className="h-9 w-9 rounded-full object-cover" /><span><span className="block text-sm font-bold">{farmer.name}</span><span className="block text-xs text-emerald-100/65">Farmer</span></span></button>
+              <button onClick={() => { setMobileSidebarOpen(false); setShowAccountModal(true); }} className="mt-auto flex items-center gap-3 border-t border-white/10 px-2 pt-5 text-left"><img src={farmer.photo || DEFAULT_PROFILE_AVATAR} alt="" className="h-10 w-10 rounded-full border border-white/15 object-cover" /><span className="min-w-0"><span className="block truncate text-sm font-bold">{farmer.name}</span><span className="block text-xs text-emerald-100/65">Farmer · Account</span></span></button>
             </aside>
           </div>
         )}
 
         <div className="dashboard-main-panel min-w-0">
-          <header className="relative min-h-[200px] overflow-hidden bg-gradient-to-r from-[#075137] via-[#0a6947] to-[#32855f] px-4 py-5 text-white sm:min-h-[230px] sm:px-6 sm:py-8 md:px-8 md:py-12">
-            <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full border-[32px] border-white/10" />
-            <div className="relative flex flex-col justify-between gap-4 sm:gap-6 md:flex-row md:items-start">
+          <header className={`relative ${activeTab === 'dashboard' ? 'border-b border-stone-200 bg-[#FAF9F5] px-4 py-3 text-[#1C1917] sm:px-6 sm:py-4 md:px-8' : activeTab === 'analytics' ? 'min-h-[138px] overflow-hidden bg-[#1D6F42] px-4 py-5 text-white sm:px-9 sm:py-6 md:px-9 md:py-7' : 'min-h-[200px] overflow-hidden bg-gradient-to-r from-[#075137] via-[#0a6947] to-[#32855f] px-4 py-5 text-white sm:min-h-[230px] sm:px-6 sm:py-8 md:px-8 md:py-12'}`}>
+            {activeTab !== 'dashboard' && <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full border-[32px] border-white/10" />}
+            <div className={`relative flex flex-col justify-between gap-4 sm:gap-6 ${activeTab === 'dashboard' ? 'md:flex-row md:items-center' : 'md:flex-row md:items-start'}`}>
               <div className="min-w-0">
-                <div className="dashboard-mobile-top mb-4 flex items-center gap-3 sm:mb-6">
-                  <button onClick={() => setMobileSidebarOpen(true)} aria-label="Open menu" className="rounded-xl bg-white/10 p-2.5 transition hover:bg-white/20"><Menu className="h-5 w-5" /></button>
-                  <span className="text-xs font-bold tracking-[.14em] text-emerald-200">RAMBUTECH</span>
+                <div className={`dashboard-mobile-top flex items-center gap-3 ${activeTab === 'dashboard' ? '' : 'mb-4 sm:mb-6'}`}>
+                  <button onClick={() => setMobileSidebarOpen(true)} aria-label="Open menu" className={`rounded-xl p-2.5 transition ${activeTab === 'dashboard' ? 'bg-emerald-100 text-[#14532D] hover:bg-emerald-200' : 'bg-white/10 text-white hover:bg-white/20'}`}><Menu className="h-5 w-5" /></button>
+                  <span className={`text-xs font-bold tracking-[.14em] ${activeTab === 'dashboard' ? 'text-[#14532D]' : 'text-emerald-200'}`}>RAMBUTECH</span>
                 </div>
-                <p className="text-sm font-semibold text-emerald-100">{language === 'tl' ? 'Magandang Hapon,' : 'Good afternoon,'}</p>
-                <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl md:text-4xl">{farmer.name || 'Santander'}!</h2>
-                <p className="mt-2 max-w-sm text-xs leading-5 text-emerald-100/75 sm:text-sm sm:leading-6">{language === 'tl' ? 'Bantay ang iyong taniman, para sa mas magandang ani.' : 'Monitor your farm for a healthier, more productive harvest.'}</p>
+                {activeTab === 'analytics' ? (
+                  <>
+                    <p className="text-xs font-medium text-emerald-100/90 sm:text-[13px]">
+                      {language === 'tl' ? 'Buod ng Bukid at Mga Tala' : 'Farm Summary & Audit Logs'}
+                    </p>
+                    <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-[28px]">
+                      {language === 'tl' ? 'RAMBUTECH Pangkalahatang-ideya ng Bukid' : 'RAMBUTECH Farm Overview'}
+                    </h2>
+                    <p className="mt-1.5 max-w-2xl text-xs text-emerald-50/85 sm:text-[13.5px]">
+                      {language === 'tl'
+                        ? 'Subaybayan ang sensor history, AI crop scans, at mga ulat ng bukid.'
+                        : 'Monitor historical telemetry, AI crop scans, and downloadable farm reports.'}
+                    </p>
+                  </>
+                ) : activeTab !== 'dashboard' && (
+                  <>
+                    <p className="text-sm font-semibold text-emerald-100">{language === 'tl' ? 'Magandang Hapon,' : 'Good afternoon,'}</p>
+                    <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl md:text-4xl">{farmer.name || 'Farmer'}!</h2>
+                    <p className="mt-2 max-w-sm text-xs leading-5 text-emerald-100/75 sm:text-sm sm:leading-6">{language === 'tl' ? 'Bantay ang iyong taniman, para sa mas magandang ani.' : 'Monitor your farm for a healthier, more productive harvest.'}</p>
+                  </>
+                )}
               </div>
-              <div className="flex w-full shrink-0 flex-col items-end gap-3 sm:gap-5 md:flex-1 md:self-auto">
+              <div className={`flex items-center gap-3 ${activeTab === 'dashboard' ? 'w-full shrink-0 flex-wrap justify-between sm:justify-end' : 'absolute right-0 top-0 z-20 w-auto'}`}>
+              {activeTab === 'dashboard' && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={() => setActiveTab('disease')} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[#14532D] px-3.5 text-xs font-bold text-white transition hover:bg-[#0F3F22] sm:px-4 sm:text-sm">
+                    <ScanLine className="h-4 w-4" aria-hidden="true" />{language === 'tl' ? 'Mag-scan ng dahon' : 'Scan a leaf'}
+                  </button>
+                  <button type="button" onClick={() => setActiveTab('maturity')} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-stone-300 bg-white px-3.5 text-xs font-bold text-[#1C1917] transition hover:border-[#14532D] sm:px-4 sm:text-sm">
+                    <Sprout className="h-4 w-4 text-[#14532D]" aria-hidden="true" />{language === 'tl' ? 'Suriin ang pagkahinog' : 'Check maturity'}
+                  </button>
+                  <div className="hidden items-center rounded-2xl border border-stone-300 bg-stone-200/90 p-1 lg:inline-flex" role="group" aria-label="Language selector">
+                    <button type="button" onClick={() => changeLanguage('en')} aria-pressed={language === 'en'} className={`min-h-9 rounded-xl px-3 text-xs font-bold ${language === 'en' ? 'bg-[#14532D] text-white' : 'text-stone-700 hover:bg-stone-300/60'}`}>EN</button>
+                    <button type="button" onClick={() => changeLanguage('tl')} aria-pressed={language === 'tl'} className={`min-h-9 rounded-xl px-3 text-xs font-bold ${language === 'tl' ? 'bg-[#14532D] text-white' : 'text-stone-700 hover:bg-stone-300/60'}`}>Tagalog</button>
+                  </div>
+                </div>
+              )}
               <Popover open={showNotifications} onOpenChange={(open) => {
                 setShowNotifications(open);
                 if (open) setUnreadNotificationIds([]);
@@ -718,7 +741,7 @@ const PrototypeApp = ({ onBack, currentUser }) => {
                 <button
                   type="button"
                   aria-label={language === 'tl' ? 'Mga Notification' : 'Notifications'}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white shadow-sm transition hover:bg-white/20"
+                  className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-sm transition ${activeTab === 'dashboard' ? 'bg-emerald-100 text-[#14532D] hover:bg-emerald-200' : 'bg-white/10 text-white hover:bg-white/20'}`}
                   title={language === 'tl' ? 'Mga Notification' : 'Notifications'}
                 >
                   <Bell className="h-5 w-5" />
@@ -781,7 +804,7 @@ const PrototypeApp = ({ onBack, currentUser }) => {
               </div>
             </div>
           </header>
-          <main className="mx-auto w-full max-w-6xl px-3 py-4 sm:px-6 sm:py-5 md:px-10">
+          <main className={`mx-auto w-full ${activeTab === 'dashboard' ? 'max-w-7xl px-3 py-4 sm:px-6 sm:py-5 md:px-8' : activeTab === 'analytics' ? 'max-w-[1360px] px-3 py-4 sm:px-6 sm:py-5 md:px-8' : 'max-w-6xl px-3 py-4 sm:px-6 sm:py-5 md:px-10'}`}>
 
           <TabsContent value="dashboard" className="mt-0 space-y-4 sm:space-y-6">
             <FarmDashboard
@@ -814,7 +837,7 @@ const PrototypeApp = ({ onBack, currentUser }) => {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
-            <HistoricalData />
+            <HistoricalData location={location} />
           </TabsContent>
 
           {/* Account moved to modal (triggered from header/avatar) */}
@@ -985,6 +1008,8 @@ const PrototypeApp = ({ onBack, currentUser }) => {
                     </button>
                   </div>
                 </div>
+
+                <ConsentSettings onWithdrawn={logoutUser} />
 
                 {/* Logout Section */}
                 <div className="border-t border-slate-200 pt-5">

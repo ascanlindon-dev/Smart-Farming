@@ -66,7 +66,7 @@ class HostedTelemetryTests(TestCase):
         self.assertEqual(SensorReading.objects.count(), 0)
 
     def test_valid_device_key_preserves_real_zero_values(self):
-        response = self.client.post('/api/telemetry/', {'device_id': 'test-device', 'temperature': 0, 'rain': False},
+        response = self.client.post('/api/telemetry/', {'device_id': 'test-device', 'temperature': 0, 'is_raining': False},
                                     content_type='application/json', HTTP_X_TELEMETRY_KEY='test-device-key-for-hosting-requests')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(SensorReading.objects.get().temperature, 0)

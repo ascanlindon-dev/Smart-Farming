@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8000';
+
 export default defineConfig(async () => ({
   plugins: [react(), (await import('@tailwindcss/vite')).default()],
   resolve: {
@@ -58,7 +60,7 @@ export default defineConfig(async () => ({
     open: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: apiProxyTarget,
         changeOrigin: false,
         secure: false,
       },

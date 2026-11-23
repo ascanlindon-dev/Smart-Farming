@@ -55,18 +55,54 @@ class SensorAndSessionTests(TestCase):
         self.login()
         self.assertNotIn('private-result', str(self.client.get('/api/predictions/history/').json()))
 
-    def test_telemetry_round_trip_preserves_real_zeroes(self):
-        response = self.post('/api/telemetry/', {'device_id': 'test-device', 'temperature': 0, 'humidity': 0, 'rain': False})
+    def test_prediction_transactions_can_be_filtered_by_scan_type(self):
+        Prediction.objects.create(user=self.user, prediction_type='leaf', label='leaf-result', confidence=.91)
+        Prediction.objects.create(user=self.user, prediction_type='rambutan', label='maturity-result', confidence=.88)
+        self.login()
+
+        leaf_response = self.client.get('/api/predictions/transactions/?prediction_type=leaf')
+        maturity_response = self.client.get('/api/predictions/transactions/?prediction_type=rambutan')
+        invalid_response = self.client.get('/api/predictions/transactions/?prediction_type=unknown')
+
+        self.assertEqual(leaf_response.status_code, 200)
+        self.assertEqual(maturity_response.status_code, 200)
+        self.assertEqual([row['label'] for row in leaf_response.json()['results']], ['leaf-result'])
+        self.assertEqual([row['label'] for row in maturity_response.json()['results']], ['maturity-result'])
+        self.assertEqual(leaf_response.json()['total_count'], 2)
+        self.assertEqual(invalid_response.status_code, 400)
+
+    def test_telemetry_preserves_raw_rain_and_requires_two_verified_states(self):
+        response = self.post('/api/telemetry/', {
+            'device_id': 'test-device', 'temperature': 0, 'humidity': 0,
+            'rain': 1023, 'is_raining': False,
+        })
         self.assertEqual(response.status_code, 200)
         data = self.client.get('/api/sensors/').json()
         self.assertEqual(data['temperature'], 0)
         self.assertEqual(data['humidity'], 0)
+        self.assertEqual(data['rainRaw'], 1023)
+        self.assertIsNone(data['isRaining'])
+
+        response = self.post('/api/telemetry/', {
+            'device_id': 'test-device', 'rain': 1023, 'is_raining': False,
+        })
+        self.assertEqual(response.status_code, 200)
+        data = self.client.get('/api/sensors/').json()
         self.assertIs(data['isRaining'], False)
+
+        self.post('/api/telemetry/', {
+            'device_id': 'test-device', 'rain': 1023, 'is_raining': True,
+        })
+        self.assertIsNone(self.client.get('/api/sensors/').json()['isRaining'])
+        self.post('/api/telemetry/', {
+            'device_id': 'test-device', 'rain': 1023, 'is_raining': True,
+        })
+        self.assertIs(self.client.get('/api/sensors/').json()['isRaining'], True)
         self.assertIsNone(data['soilMoisture'])
         self.assertTrue(data['received_at'])
 
     def test_malformed_telemetry_is_rejected_without_writing(self):
-        for value in ([], {}, {'temperature': 'hot'}, {'humidity': 101}, {'rain': -1}, {'soil_raw': 1.25}, {'device_id': ['invalid'], 'temperature': 20}):
+        for value in ([], {}, {'temperature': 'hot'}, {'humidity': 101}, {'rain': -1}, {'rain': False}, {'is_raining': 1}, {'soil_raw': 1.25}, {'device_id': ['invalid'], 'temperature': 20}):
             with self.subTest(value=value):
                 self.assertEqual(self.post('/api/telemetry/', value).status_code, 400)
         response = self.client.post('/api/telemetry/', '{"temperature": NaN}', content_type='application/json')
@@ -76,28 +112,37 @@ class SensorAndSessionTests(TestCase):
     def test_no_sensor_data_is_not_reported_as_zero(self):
         self.assertEqual(self.client.get('/api/sensors/').json(), {})
 
-    @override_settings(SENSOR_SIMULATION_ENABLED=True, SENSOR_SIMULATION_INTERVAL_SECONDS=20)
-    @patch('api.views.random.uniform', side_effect=[27.1234, 67.8912, 29.8765, 79.4567])
-    def test_enabled_sensor_simulator_persists_decimal_readings_every_20_seconds(self, uniform):
-        first = self.client.get('/api/sensors/')
-        self.assertEqual(first.status_code, 200)
-        self.assertEqual(first.json()['temperature'], 27.12)
-        self.assertEqual(first.json()['humidity'], 67.89)
-        self.assertEqual(first.json()['device_id'], 'temporary-simulator')
-        self.assertEqual(SensorReading.objects.count(), 1)
+    def test_raw_rain_value_is_not_interpreted_as_rain_status(self):
+        SensorReading.objects.create(device_id='test-device', rain=1023)
+        data = self.client.get('/api/sensors/').json()
+        self.assertEqual(data['rainRaw'], 1023)
+        self.assertIsNone(data['isRaining'])
 
-        second = self.client.get('/api/sensors/')
-        self.assertEqual(second.json()['temperature'], 27.12)
-        self.assertEqual(second.json()['humidity'], 67.89)
-        self.assertEqual(SensorReading.objects.count(), 1)
-        self.assertEqual(uniform.call_count, 2)
+    def test_binary_dry_signal_is_reported_as_no_rain_after_stable_readings(self):
+        for _ in range(2):
+            SensorReading.objects.create(device_id='wemos_d1r1', rain=0)
+        data = self.client.get('/api/sensors/').json()
+        self.assertIs(data['isRaining'], False)
 
-        SensorReading.objects.update(received_at=timezone.now() - timedelta(seconds=21))
-        third = self.client.get('/api/sensors/')
-        self.assertEqual(third.json()['temperature'], 29.88)
-        self.assertEqual(third.json()['humidity'], 79.46)
-        self.assertEqual(SensorReading.objects.count(), 2)
-        self.assertEqual(uniform.call_count, 4)
+    def test_persisted_simulator_rows_are_not_served_as_live_sensor_data(self):
+        hardware = SensorReading.objects.create(device_id='wemos_d1r1', temperature=27, rain=0)
+        SensorReading.objects.create(device_id='temporary-simulator', temperature=29)
+        SensorReading.objects.filter(pk=hardware.pk).update(received_at=timezone.now() - timedelta(seconds=30))
+        data = self.client.get('/api/sensors/').json()
+        self.assertEqual(data['device_id'], 'wemos_d1r1')
+        self.assertEqual(data['temperature'], 27)
+
+    def test_verified_rain_includes_label_caution_in_disease_recommendation(self):
+        for _ in range(2):
+            SensorReading.objects.create(device_id='test-device', is_raining=True)
+        with patch.dict(os.environ, {'OPENAI_API_KEY': ''}):
+            response = self.post('/api/disease-recommendation/', {'disease': 'Anthracnose', 'confidence': 90})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIs(data['environment']['rain_detected'], True)
+        self.assertTrue(any('rainfast interval' in advice for advice in data['environmental_advice']))
+        self.assertFalse(data['chemical_treatment']['available'])
+        self.assertIn('rainfast interval', data['chemical_treatment']['message'])
 
     def test_sensor_history_does_not_sum_raw_rain_as_millimeters(self):
         SensorReading.objects.create(temperature=29, humidity=65, rain=1023)
@@ -106,6 +151,28 @@ class SensorAndSessionTests(TestCase):
         self.assertIsNone(data['rainfallSummary']['dryDays'])
         self.assertEqual(data['sensorRecords'][0]['rainRaw'], 1023)
         self.assertTrue(all(row['rainfall'] is None for row in data['rainfallData']))
+
+    def test_all_time_history_includes_older_sensor_and_prediction_records(self):
+        older_time = timezone.now() - timedelta(days=400)
+        reading = SensorReading.objects.create(device_id='test-device', temperature=27, humidity=70)
+        SensorReading.objects.filter(pk=reading.pk).update(received_at=older_time)
+        prediction = Prediction.objects.create(
+            user=self.user,
+            prediction_type='leaf',
+            label='older-scan',
+            confidence=.95,
+        )
+        Prediction.objects.filter(pk=prediction.pk).update(created_at=older_time)
+        self.login()
+
+        sensor_data = self.client.get('/api/sensors/history/?range=all').json()
+        prediction_data = self.client.get('/api/predictions/history/?range=all').json()
+
+        self.assertEqual(sensor_data['summary']['startDate'], timezone.localdate(older_time).isoformat())
+        self.assertTrue(any(label.endswith(str(older_time.year)[-2:]) for label in (
+            row['time'] for row in sensor_data['temperatureData']
+        )))
+        self.assertEqual([item['label'] for item in prediction_data['predictionRecords']], ['older-scan'])
 
     def test_empty_sensor_history_does_not_claim_low_risk_or_dry_weather(self):
         data = self.client.get('/api/sensors/history/').json()

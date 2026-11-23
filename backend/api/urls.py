@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from .prediction_stats import leaf_scan_stats
-from .prediction_transactions import prediction_transactions
+from .prediction_transactions import prediction_image, prediction_transactions
 from .sensor_readings import sensor_readings
 
 urlpatterns = [
@@ -9,11 +9,15 @@ urlpatterns = [
     path('csrf/', views.csrf_token),
     path('password/change/', views.change_password),
     path('me/', views.me),
+    path('consent/', views.user_consent, name='user-consent'),
+    path('consent/withdraw/', views.withdraw_user_consent, name='withdraw-user-consent'),
+    path('admin/consents/', views.admin_user_consents, name='admin-user-consents'),
     path('sensors/', views.sensors),
     path('sensors/history/', views.sensor_history),
     path('sensors/readings/', sensor_readings),
     path('predictions/history/', views.prediction_history),
     path('predictions/transactions/', prediction_transactions),
+    path('predictions/<int:prediction_id>/image/', prediction_image),
     path('predictions/leaf-stats/', leaf_scan_stats),
     path('nlp/summary/', views.nlp_summary),
     path('disease-recommendation/', views.disease_recommendation),

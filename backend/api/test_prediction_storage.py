@@ -1,4 +1,5 @@
 import io
+from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -82,14 +83,20 @@ class PredictionStorageTests(TestCase):
     def test_accepted_scan_endpoints_return_confirmed_storage_status(self):
         client = APIClient()
         client.force_authenticate(self.user)
-        for kind, classes in [('leaf', ['healthy', 'anthracnose']), ('rambutan', ['mature', 'immature'])]:
-            data = io.BytesIO()
-            Image.new('RGB', (32, 32), (20, 160, 20)).save(data, format='PNG')
-            model = Mock(input_shape=(None, 32, 32, 3), _class_names=classes)
-            model.predict.return_value = np.array([[.99, .01]])
-            with patch(f'api.views.verify_{kind}', return_value={'verified': True}), patch(f'api.views._{kind}_model', model):
-                response = client.post(f'/api/predict_{kind}/', {'image': SimpleUploadedFile('scan.png', data.getvalue())}, format='multipart')
-            self.assertEqual(response.status_code, 200)
-            self.assertTrue(response.json()['storage']['cloud_saved'])
+        with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            for kind, classes in [('leaf', ['healthy', 'anthracnose']), ('rambutan', ['mature', 'immature'])]:
+                data = io.BytesIO()
+                Image.new('RGB', (32, 32), (20, 160, 20)).save(data, format='PNG')
+                model = Mock(input_shape=(None, 32, 32, 3), _class_names=classes)
+                model.predict.return_value = np.array([[.99, .01]])
+                with patch(f'api.views.verify_{kind}', return_value={'verified': True}), patch(f'api.views._{kind}_model', model):
+                    response = client.post(f'/api/predict_{kind}/', {'image': SimpleUploadedFile('scan.png', data.getvalue())}, format='multipart')
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(response.json()['storage']['cloud_saved'])
+                if kind == 'rambutan':
+                    self.assertEqual(response.json()['classification'], 'ripe')
+                    self.assertIn('/api/predictions/', response.json()['image_url'])
+                    record = Prediction.objects.get(prediction_type='rambutan')
+                    self.assertTrue(record.image_name.startswith('maturity_assessments/'))
         self.assertEqual(Prediction.objects.filter(user=self.user).count(), 2)
         self.assertEqual(Prediction.objects.using('prediction_cloud').count(), 2)

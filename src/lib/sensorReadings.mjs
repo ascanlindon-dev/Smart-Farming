@@ -28,7 +28,7 @@ export function sensorSnapshot(payload, { now = Date.now(), requestFailed = fals
   else status = 'recent';
 
   const current = status === 'recent';
-  const rainValue = sensorNumber(data.rainfall ?? data.rain_mm ?? data.rain);
+  const rainRaw = sensorNumber(data.rainRaw ?? data.rain_raw ?? data.rain);
   const rainFlag = sensorBoolean(data.isRaining ?? data.is_raining);
 
   return {
@@ -37,7 +37,12 @@ export function sensorSnapshot(payload, { now = Date.now(), requestFailed = fals
     deviceId: typeof data.device_id === 'string' ? data.device_id.trim() : null,
     temperature: current ? sensorNumber(data.temperature ?? data.temp ?? data.temp_c ?? data.temperature_c) : null,
     humidity: current ? sensorNumber(data.humidity ?? data.hum ?? data.relative_humidity) : null,
-    // The backend's rain field is a rain-sensor value, not a calibrated mm reading.
-    isRaining: current ? (rainFlag ?? (rainValue === null ? null : rainValue > 0)) : null,
+    rainRaw: current ? rainRaw : null,
+    // A raw sensor value has no rain meaning until the device reports its verified logic.
+    isRaining: current ? rainFlag : null,
+    lastTemperature: sensorNumber(data.temperature ?? data.temp ?? data.temp_c ?? data.temperature_c),
+    lastHumidity: sensorNumber(data.humidity ?? data.hum ?? data.relative_humidity),
+    lastRainRaw: rainRaw,
+    lastIsRaining: rainFlag,
   };
 }

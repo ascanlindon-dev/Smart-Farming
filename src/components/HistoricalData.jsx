@@ -1,4 +1,5 @@
 import { apiFetch } from '../lib/apiFetch.mjs';
+import { readSessionData, writeSessionData } from '../lib/sessionDataCache.mjs';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { LanguageContext } from '../LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -19,15 +20,17 @@ import {
   YAxis,
 } from 'recharts';
 import {
-  AlertTriangle,
-  Apple,
-  Clock3,
   Download,
-  Droplets,
-  Leaf,
-  Thermometer,
+  RefreshCw,
 } from 'lucide-react';
-import { Leaf3D, Lightbulb3D, Rambutan3D, RainCloud3D, Thermometer3D, WaterDrop3D } from './Environmental3DIcons';
+import {
+  Activity3D,
+  Leaf3D,
+  Rambutan3D,
+  RainCloud3D,
+  Thermometer3D,
+  WaterDrop3D,
+} from './Environmental3DIcons';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
@@ -42,6 +45,7 @@ const translations = {
     startDate: 'Start Date',
     endDate: 'End Date',
     apply: 'Apply',
+    monitoringWindow: 'Monitoring Window',
     today: 'Today',
     last3Days: 'Last 3 Days',
     last2Weeks: 'Last 2 Weeks',
@@ -51,6 +55,7 @@ const translations = {
     last30: 'Last 30 Days',
     last90: 'Last 90 Days',
     lastYear: 'Last Year',
+    allTime: 'All Time',
     noData: 'No historical data available yet.',
     download: 'Download Summary',
     riskAnalysis: 'Risk Analysis',
@@ -58,10 +63,11 @@ const translations = {
   tl: {
     title: 'Pangkalahatang-ideya ng Bukid',
     subtitle: 'Mga trend ng performance at kapaligiran ng iyong bukid, kasama ang downloadable summary.',
-    customRange: 'Custom Range',
+    customRange: 'Pasadyang Saklaw',
     startDate: 'Petsa ng Simula',
     endDate: 'Petsa ng Wakas',
     apply: 'I-apply',
+    monitoringWindow: 'Panahon ng Pagsubaybay',
     today: 'Ngayon',
     last3Days: 'Huling 3 Araw',
     last2Weeks: 'Huling 2 Linggo',
@@ -71,6 +77,7 @@ const translations = {
     last30: 'Huling 30 Araw',
     last90: 'Huling 90 Araw',
     lastYear: 'Huling Taon',
+    allTime: 'Lahat ng Panahon',
     noData: 'Wala pang historical data.',
     download: 'I-download ang Summary',
     riskAnalysis: 'Pagsusuri ng Panganib',
@@ -133,6 +140,38 @@ const emptyHistory = {
     recommendationSource: 'fallback',
   },
 };
+
+const FORECAST_DAYS_BY_RANGE = {
+  today: 1,
+  '3days': 3,
+  '7days': 7,
+  '2weeks': 10,
+  '2months': 10,
+  '6months': 10,
+  '30days': 10,
+  '90days': 10,
+  '1year': 10,
+};
+
+function mergeHistoryPayloads(sensorData = {}, predictionData = {}) {
+  return {
+    ...emptyHistory,
+    temperatureData: sensorData.temperatureData || [],
+    rainfallData: sensorData.rainfallData || [],
+    humidityData: sensorData.humidityData || [],
+    diseaseRiskData: sensorData.diseaseRiskData || [],
+    sensorRecords: sensorData.sensorRecords || [],
+    summary: { ...emptyHistory.summary, ...(sensorData.summary || {}) },
+    rainfallSummary: { ...emptyHistory.rainfallSummary, ...(sensorData.rainfallSummary || {}) },
+    leafDetectionData: predictionData.leafDetectionData || [],
+    fruitMaturityData: predictionData.fruitMaturityData || [],
+    predictionRecords: predictionData.predictionRecords || [],
+    leafLabelBreakdown: predictionData.leafLabelBreakdown || [],
+    fruitLabelBreakdown: predictionData.fruitLabelBreakdown || [],
+    leafSummary: { ...emptyHistory.leafSummary, ...(predictionData.leafSummary || {}) },
+    fruitSummary: { ...emptyHistory.fruitSummary, ...(predictionData.fruitSummary || {}) },
+  };
+}
 
 function formatValue(value, suffix = '', fallbackText = 'No data') {
   if (value == null || Number.isNaN(value)) return fallbackText;
@@ -299,35 +338,37 @@ function HistoryTooltip({ active, payload, label }) {
   );
 }
 
-function SectionHeader({ icon: Icon, visual: Visual, title, description }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 p-1.5 text-emerald-700">
-        {Visual ? <Visual /> : <Icon className="h-4 w-4" />}
-      </div>
-      <div>
-        <h3 className="text-base font-bold text-slate-900">{title}</h3>
-        <p className="text-xs text-slate-600 sm:text-sm">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-export default function HistoricalData() {
+export default function HistoricalData({ location = '' }) {
   const { language } = useContext(LanguageContext);
   const t = translations[language] || translations.en;
   const [timeRange, setTimeRange] = useState('7days');
+  const [initialCache] = useState(() => ({
+    sensors: readSessionData('/api/sensors/history/?range=7days'),
+    predictions: readSessionData('/api/predictions/history/?range=7days'),
+    weather: readSessionData('/api/weather/?q=Victoria%2C%20Oriental%20Mindoro%2C%20Philippines&days=7'),
+  }));
+  const [activeLogCategory, setActiveLogCategory] = useState('sensors');
+  const [savedPredictionCounts, setSavedPredictionCounts] = useState(null);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [appliedCustomRange, setAppliedCustomRange] = useState({ start: '', end: '' });
-  const [history, setHistory] = useState(emptyHistory);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [history, setHistory] = useState(() => mergeHistoryPayloads(
+    initialCache.sensors?.data,
+    initialCache.predictions?.data,
+  ));
+  const initialUpdatedAt = Math.max(
+    initialCache.sensors?.savedAt || 0,
+    initialCache.predictions?.savedAt || 0,
+  );
+  const [lastUpdated, setLastUpdated] = useState(initialUpdatedAt ? new Date(initialUpdatedAt) : null);
+  const [refreshRevision, setRefreshRevision] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [nlpSummary, setNlpSummary] = useState('');
-  const [nlpSource, setNlpSource] = useState('fallback');
-  const [weatherForecast, setWeatherForecast] = useState([]);
+  const [weatherForecast, setWeatherForecast] = useState(() => initialCache.weather?.data?.forecast || []);
   const [activeSection, setActiveSection] = useState('temperature');
   const [chartRenderKey, setChartRenderKey] = useState(0);
   const sectionTabsRef = useRef(null);
+  const activeHistoryPathRef = useRef(null);
   const tabsPointerActiveRef = useRef(false);
   const tabsPointerIdRef = useRef(null);
   const tabsScrollLeftRef = useRef(0);
@@ -356,15 +397,32 @@ export default function HistoricalData() {
       params.set('start_date', appliedCustomRange.start);
       params.set('end_date', appliedCustomRange.end);
     }
+    const query = params.toString();
+    const sensorPath = `/api/sensors/history/?${query}`;
+    const predictionPath = `/api/predictions/history/?${query}`;
+    const forecastDays = FORECAST_DAYS_BY_RANGE[timeRange] || 7;
+    const weatherPath = `/api/weather/?q=Victoria%2C%20Oriental%20Mindoro%2C%20Philippines&days=${forecastDays}`;
+    const sensorCache = readSessionData(sensorPath);
+    const predictionCache = readSessionData(predictionPath);
+    const weatherCache = readSessionData(weatherPath);
+    const filterChanged = activeHistoryPathRef.current !== sensorPath;
+    if (filterChanged) {
+      activeHistoryPathRef.current = sensorPath;
+      setHistory(mergeHistoryPayloads(sensorCache?.data, predictionCache?.data));
+      setWeatherForecast(weatherCache?.data?.forecast || []);
+      const cachedUpdatedAt = Math.max(sensorCache?.savedAt || 0, predictionCache?.savedAt || 0);
+      setLastUpdated(cachedUpdatedAt ? new Date(cachedUpdatedAt) : null);
+    }
 
     async function loadHistory() {
       try {
-        const res = await apiFetch(`/api/sensors/history/?${params.toString()}`);
+        const res = await apiFetch(sensorPath);
         if (!res.ok) {
           throw new Error('Failed to load history');
         }
         const json = await res.json();
         if (!active) return;
+        writeSessionData(sensorPath, json);
         setHistory((prev) => ({
           ...prev,
           temperatureData: json.temperatureData || [],
@@ -383,12 +441,13 @@ export default function HistoricalData() {
 
     async function loadPredictionHistory() {
       try {
-        const res = await apiFetch(`/api/predictions/history/?${params.toString()}`);
+        const res = await apiFetch(predictionPath);
         if (!res.ok) {
           throw new Error('Failed to load prediction history');
         }
         const json = await res.json();
         if (!active) return;
+        writeSessionData(predictionPath, json);
         setHistory((prev) => ({
           ...prev,
           leafDetectionData: json.leafDetectionData || [],
@@ -406,30 +465,24 @@ export default function HistoricalData() {
 
     async function loadWeatherForecast() {
       try {
-        const rangeDays = {
-          today: 1,
-          '3days': 3,
-          '7days': 7,
-          '2weeks': 10,
-          '2months': 10,
-          '6months': 10,
-          '30days': 10,
-          '90days': 10,
-          '1year': 10,
-        };
-        const forecastDays = rangeDays[timeRange] || 7;
-        const response = await apiFetch(`/api/weather/?q=Victoria%2C%20Oriental%20Mindoro%2C%20Philippines&days=${forecastDays}`);
+        const response = await apiFetch(weatherPath);
         if (!response.ok) throw new Error('Failed to load weather forecast');
         const json = await response.json();
         if (!active) return;
+        writeSessionData(weatherPath, json);
         setWeatherForecast(Array.isArray(json.forecast) ? json.forecast : []);
       } catch (error) {
-        if (active) setWeatherForecast([]);
+        if (!active) return;
       }
     }
 
     async function refreshAll() {
-      await Promise.all([loadHistory(), loadPredictionHistory(), loadWeatherForecast()]);
+      setIsRefreshing(true);
+      try {
+        await Promise.all([loadHistory(), loadPredictionHistory(), loadWeatherForecast()]);
+      } finally {
+        if (active) setIsRefreshing(false);
+      }
     }
 
     refreshAll();
@@ -437,7 +490,7 @@ export default function HistoricalData() {
     return () => {
       active = false;
     };
-  }, [timeRange, appliedCustomRange.start, appliedCustomRange.end]);
+  }, [timeRange, appliedCustomRange.start, appliedCustomRange.end, refreshRevision]);
 
   useEffect(() => {
     setChartRenderKey((prev) => prev + 1);
@@ -530,10 +583,6 @@ export default function HistoricalData() {
     [temperatureData, rainfallData, humidityData, diseaseRiskData, leafDetectionData, fruitMaturityData, leafLabelBreakdown, fruitLabelBreakdown, weatherForecast],
   );
   const hasExistingData = lastUpdated !== null || hasAnyData;
-  const heaviestRainfall = displayedRainfallData.some((item) => item.rainfall != null)
-    ? Math.max(...displayedRainfallData.filter((item) => item.rainfall != null).map((item) => item.rainfall))
-    : null;
-
   const rangeLabel =
     timeRange === 'custom' && appliedCustomRange.start && appliedCustomRange.end ? `${appliedCustomRange.start} to ${appliedCustomRange.end}` :
     timeRange === 'today' ? t.today :
@@ -543,6 +592,7 @@ export default function HistoricalData() {
     timeRange === '6months' ? t.last6Months :
     timeRange === '7days' ? t.last7 :
     timeRange === '30days' ? t.last30 :
+    timeRange === 'all' ? t.allTime :
     timeRange === '90days' ? t.last90 :
     t.lastYear;
 
@@ -557,7 +607,6 @@ export default function HistoricalData() {
     async function loadNlpSummary() {
       if (!hasAnyData) {
         setNlpSummary('');
-        setNlpSource('fallback');
         return;
       }
 
@@ -581,11 +630,9 @@ export default function HistoricalData() {
         const json = await res.json();
         if (!active) return;
         setNlpSummary(json.summary || '');
-        setNlpSource(json.source || 'fallback');
       } catch (error) {
         if (!active) return;
         setNlpSummary('');
-        setNlpSource('fallback');
       }
     }
 
@@ -599,14 +646,6 @@ export default function HistoricalData() {
   const riskProgress = Math.max(0, Math.min(100, Math.round(summary.currentRisk ?? 0)));
   const humidityUi = getHumidityPresentation(summary.avgHumidity);
   const rainfallUi = getRainfallPresentation(displayedRainfallSummary.totalRainfall, displayedRainfallSummary.rainyDays);
-  const rainfallMeaning =
-    displayedRainfallSummary.totalRainfall == null
-      ? 'Rainfall meaning will appear once the weather forecast is available.'
-      : rainfallUi.label === 'Heavy Rain'
-        ? 'Rainfall was heavy this week. Soil may stay too wet and affect plant health.'
-        : rainfallUi.label === 'Moderate Rain'
-          ? 'Rainfall was steady this week. This is generally good for crop growth.'
-          : 'Rainfall stayed light this week. Conditions are relatively dry and may need closer watering attention.';
   const highestHumidityDay = humidityData.length
     ? humidityData.reduce((best, item) => ((item.humidity ?? -1) > (best.humidity ?? -1) ? item : best), humidityData[0])
     : null;
@@ -918,84 +957,175 @@ export default function HistoricalData() {
   };
 
   return (
-    <div className="historical-data-page relative mx-auto w-full max-w-6xl space-y-4 overflow-x-hidden px-3 sm:space-y-6 sm:px-6">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.10),transparent_25%),linear-gradient(180deg,rgba(241,245,249,0.65),rgba(255,255,255,0))]" />
-      <div className="pointer-events-none absolute right-0 top-8 -z-10 h-40 w-40 rounded-full bg-emerald-200/30 blur-3xl" />
-      <div className="pointer-events-none absolute left-0 top-64 -z-10 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl" />
+    <div className="historical-data-page mx-auto w-full max-w-[1360px] space-y-5 overflow-x-hidden sm:space-y-6">
+      <section className="farm-overview-header flex flex-col gap-4">
+        <div className="min-w-0">
+          <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{t.title}</h2>
+          <p className="mt-1 max-w-2xl text-xs text-slate-600 sm:text-sm">
+            {language === 'tl'
+              ? `Komprehensibong tala at pagsusuri para sa ${(location.trim().replace(/,\s*Philippines$/i, '') || 'Victoria, Oriental Mindoro')}.`
+              : `Comprehensive logs and analytics for ${(location.trim().replace(/,\s*Philippines$/i, '') || 'Victoria, Oriental Mindoro')}.`}
+          </p>
+        </div>
 
-      <Card className="border-none bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-xl">
-          <CardHeader>
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-white/90">
-                <Clock3 className="h-4 w-4" />
-                {lastUpdated && <span>Last updated {lastUpdated.toLocaleTimeString()}</span>}
-              </div>
-              <div>
-                <CardTitle className="text-xl text-white sm:text-2xl">{t.title}</CardTitle>
-                <CardDescription className="mt-1 max-w-2xl text-xs text-white/90 sm:text-sm">
-                  {t.subtitle}
-                </CardDescription>
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="min-w-0">
+            <p className="mb-1 text-xs font-semibold text-slate-600">{t.monitoringWindow}</p>
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="farm-overview-range-select min-h-10 border-slate-300 bg-white text-slate-800">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="custom">{t.customRange}</SelectItem>
+                <SelectItem value="today">{t.today}</SelectItem>
+                <SelectItem value="3days">{t.last3Days}</SelectItem>
+                <SelectItem value="2weeks">{t.last2Weeks}</SelectItem>
+                <SelectItem value="2months">{t.last2Months}</SelectItem>
+                <SelectItem value="6months">{t.last6Months}</SelectItem>
+                <SelectItem value="7days">{t.last7}</SelectItem>
+                <SelectItem value="30days">{t.last30}</SelectItem>
+                <SelectItem value="all">{t.allTime}</SelectItem>
+                <SelectItem value="90days">{t.last90}</SelectItem>
+                <SelectItem value="1year">{t.lastYear}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRefreshRevision((revision) => revision + 1)}
+            disabled={isRefreshing || (timeRange === 'custom' && (!appliedCustomRange.start || !appliedCustomRange.end))}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-400 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
+            {language === 'tl' ? 'I-refresh ang mga tala' : 'Refresh logs'}
+          </button>
+          <button
+            type="button"
+            onClick={handleDownloadSummary}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#1D6F42] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#165934]"
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
+            {language === 'tl' ? 'I-download ang buod' : 'Export PDF Summary'}
+          </button>
+        </div>
+      </section>
+
+      {timeRange === 'custom' && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-end">
+          <label className="flex flex-col text-xs font-medium text-slate-600">
+            {t.startDate}
+            <input
+              type="date"
+              value={customStartDate}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="mt-1 min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+            />
+          </label>
+          <label className="flex flex-col text-xs font-medium text-slate-600">
+            {t.endDate}
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="mt-1 min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={handleApplyCustomRange}
+            className="min-h-10 rounded-lg bg-[#1D6F42] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#165934] disabled:opacity-50"
+            disabled={!customStartDate || !customEndDate}
+          >
+            {t.apply}
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2 rounded-2xl border border-[#F5E1A4] bg-[#FEF9EC] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2.5 text-xs font-medium text-slate-800 sm:text-sm">
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${lastUpdated ? 'bg-emerald-600' : 'bg-amber-500'}`} />
+          <span className="min-w-0">
+            {language === 'tl'
+              ? `Panahon ng tala: ${rangeLabel} · ${summary.totalRecords ?? 0} environmental record · Lokal na timezone`
+              : `Monitoring window: ${rangeLabel} · ${summary.totalRecords ?? 0} environmental records · Local timezone`}
+          </span>
+        </div>
+        <span className="shrink-0 text-[11px] font-medium text-slate-500">
+          {lastUpdated
+            ? `${language === 'tl' ? 'Huling na-update:' : 'Last updated:'} ${lastUpdated.toLocaleString(language === 'tl' ? 'fil-PH' : 'en-PH')}`
+            : (language === 'tl' ? 'Wala pang naitalang update' : 'No update recorded yet')}
+        </span>
+      </div>
+
+      <section aria-label={language === 'tl' ? 'Mga pangunahing sukatan' : 'Executive summary metrics'} className="farm-overview-kpi-grid gap-4">
+        <article className="flex min-w-0 flex-col justify-between rounded-[18px] border border-[#E2ECE6] bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">{language === 'tl' ? 'Average na Temperatura' : 'Average Temperature'}</p>
+              <p className="mt-2.5 font-display text-[28px] font-bold leading-none text-slate-900">{formatValue(summary.avgTemperature, '°C', '—')}</p>
+            </div>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#E2ECE6] bg-[#F4F8F6] text-amber-600">
+              <Thermometer3D className="farm-overview-animated-svg h-8 w-8" />
+            </span>
+          </div>
+          <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">{rangeLabel}</p>
+        </article>
+
+        <article className="flex min-w-0 flex-col justify-between rounded-[18px] border border-[#E2ECE6] bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">{language === 'tl' ? 'Halumigmig sa Hangin' : 'Air Moisture / Humidity'}</p>
+              <div className="mt-2.5 flex flex-wrap items-baseline gap-2">
+                <span className="font-display text-[28px] font-bold leading-none text-slate-900">{formatValue(summary.avgHumidity, '%', '—')}</span>
+                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${humidityUi.badgeClass}`}>{humidityUi.label}</span>
               </div>
             </div>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#E2ECE6] bg-[#F4F8F6] text-sky-600">
+              <WaterDrop3D className="farm-overview-animated-svg h-8 w-8" />
+            </span>
+          </div>
+          <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">{rangeLabel}</p>
+        </article>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger className="w-full border-white/30 bg-white/20 text-white backdrop-blur-md sm:w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="custom">{t.customRange}</SelectItem>
-                  <SelectItem value="today">{t.today}</SelectItem>
-                  <SelectItem value="3days">{t.last3Days}</SelectItem>
-                  <SelectItem value="2weeks">{t.last2Weeks}</SelectItem>
-                  <SelectItem value="2months">{t.last2Months}</SelectItem>
-                  <SelectItem value="6months">{t.last6Months}</SelectItem>
-                  <SelectItem value="7days">{t.last7}</SelectItem>
-                  <SelectItem value="30days">{t.last30}</SelectItem>
-                  <SelectItem value="90days">{t.last90}</SelectItem>
-                  <SelectItem value="1year">{t.lastYear}</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {timeRange === 'custom' && (
-                <div className="flex flex-col gap-2 rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-md sm:flex-row sm:items-end">
-                  <label className="flex flex-col text-xs text-white/90">
-                    {t.startDate}
-                    <input
-                      type="date"
-                      value={customStartDate}
-                      onChange={(e) => setCustomStartDate(e.target.value)}
-                      className="mt-1 rounded-lg border border-white/20 bg-white/90 px-3 py-2 text-sm text-slate-900"
-                    />
-                  </label>
-                  <label className="flex flex-col text-xs text-white/90">
-                    {t.endDate}
-                    <input
-                      type="date"
-                      value={customEndDate}
-                      onChange={(e) => setCustomEndDate(e.target.value)}
-                      className="mt-1 rounded-lg border border-white/20 bg-white/90 px-3 py-2 text-sm text-slate-900"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleApplyCustomRange}
-                    className="w-full rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-400 disabled:opacity-50 sm:w-auto"
-                    disabled={!customStartDate || !customEndDate}
-                  >
-                    {t.apply}
-                  </button>
-                </div>
-              )}
-
+        <article className="flex min-w-0 flex-col justify-between rounded-[18px] border border-[#E2ECE6] bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">{language === 'tl' ? 'Panganib ng Sakit' : 'Disease Pressure'}</p>
+              <div className="mt-2.5 flex flex-wrap items-baseline gap-2">
+                <span className="font-display text-[28px] font-bold leading-none text-slate-900">{formatValue(summary.currentRisk, '%', '—')}</span>
+                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${riskUi.badgeClass}`}>{riskUi.label}</span>
+              </div>
+            </div>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#E2ECE6] bg-[#F4F8F6] text-amber-600">
+              <Leaf3D className="farm-overview-animated-svg h-8 w-8" />
+            </span>
+          </div>
+          <div className="mt-4 border-t border-slate-100 pt-3">
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-full rounded-full transition-all ${riskUi.barClass}`} style={{ width: `${riskProgress}%` }} />
             </div>
           </div>
-        </CardHeader>
-      </Card>
+        </article>
 
-      <PredictionTransactions />
-      <SensorReadings />
+        <article className="flex min-w-0 flex-col justify-between rounded-[18px] border border-[#E2ECE6] bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">{language === 'tl' ? 'Mga Naka-save na Scan' : 'AI Scan Transactions'}</p>
+              <div className="mt-2.5 flex items-baseline gap-2">
+                <span className="font-display text-[28px] font-bold leading-none text-slate-900">{(leafSummary.totalScans ?? 0) + (fruitSummary.totalScans ?? 0)}</span>
+                <span className="text-xs font-medium text-slate-500">{language === 'tl' ? 'naka-save na scan' : 'saved scans'}</span>
+              </div>
+            </div>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#E2ECE6] bg-[#F4F8F6] text-[#1D6F42]">
+              <Activity3D className="farm-overview-animated-svg h-8 w-8" />
+            </span>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-[11px] font-semibold text-slate-700">
+            <span className="rounded-full border border-[#E2ECE6] bg-[#F8FAF9] px-2.5 py-1">Leaf: {leafSummary.totalScans ?? 0}</span>
+            <span className="rounded-full border border-[#E2ECE6] bg-[#F8FAF9] px-2.5 py-1">Fruit: {fruitSummary.totalScans ?? 0}</span>
+          </div>
+        </article>
+      </section>
 
       {!hasAnyData ? (
         <Card className="border-slate-200 bg-white/85 shadow-sm backdrop-blur-sm">
@@ -1003,38 +1133,11 @@ export default function HistoricalData() {
         </Card>
       ) : (
         <>
-          <Card className="border-none bg-white/90 shadow-lg backdrop-blur-sm">
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="text-base text-slate-900">Whole-System Summary</CardTitle>
-                <CardDescription className="text-sm text-slate-600">
-                  Combined narrative from environmental monitoring, disease scans, and maturity checks for the current range.
-                </CardDescription>
-              </div>
-              <button
-                type="button"
-                onClick={handleDownloadSummary}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-100 sm:w-auto"
-              >
-                <Download className="h-4 w-4" />
-                Download Whole-System Summary
-              </button>
-            </CardHeader>
-            <CardContent className="px-6 pb-6 pt-2 sm:px-8 sm:pb-8">
-              <div className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-cyan-50">
-                <div className="box-border flex w-full min-w-0 flex-col items-start pb-5 pr-5 pt-6 text-left sm:pr-6" style={{ paddingLeft: '32px' }}>
-                  <p className="w-full min-w-0 break-words text-left text-base font-semibold text-emerald-900">Overall System narrative</p>
-                  <p className="mt-3 w-full min-w-0 break-words text-left text-base leading-8 text-slate-700">
-                    {nlpSummary || 'No whole-system narrative is available yet. Generate more history to build a stronger summary.'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="overflow-hidden border-none bg-white/85 shadow-lg backdrop-blur-sm">
+          <Card className="overflow-hidden border border-[#E2ECE6] bg-white shadow-sm">
               <CardContent className="w-full max-w-full space-y-4 overflow-x-hidden">
                 <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full space-y-6 overflow-x-hidden">
+                  <div className="farm-overview-trends-grid">
+                    <div className="farm-overview-trends-main min-w-0">
                   <div
                     ref={sectionTabsRef}
                     onPointerDown={handleTabsPointerDown}
@@ -1043,20 +1146,20 @@ export default function HistoricalData() {
                     onPointerCancel={handleTabsPointerEnd}
                     onTouchStartCapture={handleTabsTouchStartCapture}
                     onTouchMoveCapture={handleTabsTouchMoveCapture}
-                    className="relative z-10 mb-3 w-full select-none overflow-hidden"
+                    className="scrollbar-hide relative z-10 mb-3 w-full select-none overflow-x-auto"
                   >
-                    <TabsList className="grid h-auto w-full min-w-0 grid-cols-5 gap-1 rounded-2xl border border-slate-200 bg-slate-50/90 p-1.5 shadow-sm sm:gap-2">
-                    <TabsTrigger data-section-tab="temperature" value="temperature" title="Temperature" className="flex h-12 min-w-0 w-full items-center justify-center rounded-xl border border-transparent px-1 py-2 text-slate-600 transition-all duration-200 data-[state=active]:!border-emerald-600 data-[state=active]:!bg-emerald-500 data-[state=active]:!text-white data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-emerald-200"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/85 p-0.5"><Thermometer3D className="size-8 block" /></span></TabsTrigger>
-                    <TabsTrigger data-section-tab="rainfall" value="rainfall" title="Rainfall" className="flex h-12 min-w-0 w-full items-center justify-center rounded-xl border border-transparent px-1 py-2 text-slate-600 transition-all duration-200 data-[state=active]:!border-emerald-600 data-[state=active]:!bg-emerald-500 data-[state=active]:!text-white data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-emerald-200"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/85 p-0.5"><RainCloud3D className="size-8 block" isRaining /></span></TabsTrigger>
-                    <TabsTrigger data-section-tab="humidity-detail" value="humidity-detail" title="Humidity" className="flex h-12 min-w-0 w-full items-center justify-center rounded-xl border border-transparent px-1 py-2 text-slate-600 transition-all duration-200 data-[state=active]:!border-emerald-600 data-[state=active]:!bg-emerald-500 data-[state=active]:!text-white data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-emerald-200"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/85 p-0.5"><WaterDrop3D className="size-8 block" /></span></TabsTrigger>
-                    <TabsTrigger data-section-tab="leaf-detection" value="leaf-detection" title="Leaf Detection" className="flex h-12 min-w-0 w-full items-center justify-center rounded-xl border border-transparent px-1 py-2 text-slate-600 transition-all duration-200 data-[state=active]:!border-emerald-600 data-[state=active]:!bg-emerald-500 data-[state=active]:!text-white data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-emerald-200"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/85 p-0.5"><Leaf3D className="size-8 block" /></span></TabsTrigger>
-                    <TabsTrigger data-section-tab="fruit-maturity" value="fruit-maturity" title="Fruit Maturity" className="flex h-12 min-w-0 w-full items-center justify-center rounded-xl border border-transparent px-1 py-2 text-slate-600 transition-all duration-200 data-[state=active]:!border-emerald-600 data-[state=active]:!bg-emerald-500 data-[state=active]:!text-white data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-emerald-200"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/85 p-0.5"><Rambutan3D className="size-8 block" /></span></TabsTrigger>
+                    <TabsList className="flex h-auto w-max min-w-full gap-1 rounded-xl border border-[#E2ECE6] bg-[#F8FAF9] p-1.5 shadow-sm sm:gap-1.5">
+                    <TabsTrigger data-section-tab="temperature" value="temperature" title="Temperature" className="group flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-slate-600 transition data-[state=active]:border-[#1D6F42] data-[state=active]:bg-[#1D6F42] data-[state=active]:text-white data-[state=active]:shadow-sm"><Thermometer3D className="size-5 shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110 motion-reduce:transition-none" /><span>Temperature</span></TabsTrigger>
+                    <TabsTrigger data-section-tab="rainfall" value="rainfall" title="Rainfall" className="group flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-slate-600 transition data-[state=active]:border-[#1D6F42] data-[state=active]:bg-[#1D6F42] data-[state=active]:text-white data-[state=active]:shadow-sm"><RainCloud3D className="size-5 shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110 motion-reduce:transition-none" isRaining /><span>Rainfall</span></TabsTrigger>
+                    <TabsTrigger data-section-tab="humidity-detail" value="humidity-detail" title="Humidity" className="group flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-slate-600 transition data-[state=active]:border-[#1D6F42] data-[state=active]:bg-[#1D6F42] data-[state=active]:text-white data-[state=active]:shadow-sm"><WaterDrop3D className="size-5 shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110 motion-reduce:transition-none" /><span>Humidity</span></TabsTrigger>
+                    <TabsTrigger data-section-tab="leaf-detection" value="leaf-detection" title="Leaf Detection" className="group flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-slate-600 transition data-[state=active]:border-[#1D6F42] data-[state=active]:bg-[#1D6F42] data-[state=active]:text-white data-[state=active]:shadow-sm"><Leaf3D className="size-5 shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110 motion-reduce:transition-none" /><span>Leaf Scans</span></TabsTrigger>
+                    <TabsTrigger data-section-tab="fruit-maturity" value="fruit-maturity" title="Fruit Maturity" className="group flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-slate-600 transition data-[state=active]:border-[#1D6F42] data-[state=active]:bg-[#1D6F42] data-[state=active]:text-white data-[state=active]:shadow-sm"><Rambutan3D className="size-5 shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110 motion-reduce:transition-none" /><span>Fruit Maturity</span></TabsTrigger>
                     </TabsList>
                   </div>
 
                   <div className="relative z-0 w-full min-w-0 max-w-full overflow-x-hidden overscroll-x-none pt-2 [touch-action:pan-y]">
                   <TabsContent value="temperature" className="w-full min-w-0 max-w-full overflow-x-hidden space-y-4">
-                    <Card className="w-full max-w-full overflow-hidden border border-orange-100 bg-gradient-to-br from-orange-50 to-white shadow-sm">
+                    <Card className="w-full max-w-full overflow-hidden border border-[#E2ECE6] bg-white shadow-sm">
                       <CardHeader>
                         <CardTitle className="text-slate-900">Temperature Trend</CardTitle>
                         <CardDescription className="text-slate-700">
@@ -1102,136 +1205,33 @@ export default function HistoricalData() {
                       </CardContent>
                     </Card>
 
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr,0.9fr]">
-                      <Card className="border-none bg-white shadow-lg backdrop-blur-sm">
-                        <CardHeader>
-                          <SectionHeader
-                            icon={AlertTriangle}
-                            visual={() => <Lightbulb3D />}
-                            title={t.riskAnalysis}
-                            description="Visual risk status, quick interpretation, and practical next steps."
-                          />
-                        </CardHeader>
-                        <CardContent className="space-y-5">
-                          <div className="flex items-center justify-between">
-                            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ${riskUi.badgeClass}`}>
-                              <AlertTriangle className="h-4 w-4" />
-                              {riskUi.label}
-                            </span>
-                            <span className="text-sm font-medium text-slate-600">{formatValue(summary.currentRisk, '%')}</span>
-                          </div>
-
-                          <div>
-                            <div className="mb-2 flex items-center justify-between text-sm text-slate-600">
-
-                              <span>Environmental disease pressure</span>
-                              <span>{riskProgress}%</span>
-                            </div>
-                            <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${riskUi.barClass}`}
-                                style={{ width: `${riskProgress}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="rounded-2xl bg-slate-50 p-4">
-                            <p className="text-sm font-semibold text-slate-900">Mini Insights</p>
-                            <div className="mt-3 space-y-3">
-                              {insights.map((insight) => (
-                                <div key={insight} className="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 shadow-sm">
-                                  {insight}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="border-none bg-white shadow-lg backdrop-blur-sm">
-                        <CardHeader>
-                          <CardTitle className="text-slate-900">Temperature Summary</CardTitle>
-                          <CardDescription className="text-slate-600">
-                            Quick context for the selected monitoring window.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                            <div>
-                              <p className="text-sm font-medium text-slate-900">Heaviest Day</p>
-                              <p className="text-xs text-slate-600">Highest rainfall recorded in this range</p>
-                            </div>
-                            <span className="text-lg font-semibold text-slate-900">{formatValue(heaviestRainfall, ' mm')}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                            <div>
-                              <p className="text-sm font-medium text-slate-900">Monitoring Window</p>
-                              <p className="text-xs text-slate-600">Current selected range</p>
-                            </div>
-                            <span className="text-lg font-semibold text-slate-900">{rangeLabel}</span>
-                          </div>
-
-                          <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-sky-50 to-emerald-50 p-4">
-                            <p className="text-sm font-semibold text-slate-900">Download-ready reporting</p>
-                            <p className="mt-2 text-sm text-slate-700">
-                              Farmers can now export environmental data together with leaf detection and fruit maturity history in one PDF summary.
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
                   </TabsContent>
 
                   <TabsContent value="rainfall" className="w-full min-w-0 max-w-full overflow-x-hidden space-y-4">
                     <Card className="w-full max-w-full overflow-hidden border border-sky-100 bg-gradient-to-r from-sky-50 to-white shadow-sm">
                       <CardContent className="px-6 py-6 sm:px-7 sm:py-7">
-                        <div>
-                            <p className="text-sm font-medium text-slate-600">Rainfall Forecast This Week</p>
-                          <div className="mt-2 flex flex-wrap items-center gap-3">
-                            <span className="text-2xl font-bold text-slate-950 sm:text-3xl">
-                              {formatValue(displayedRainfallSummary.totalRainfall, ' mm')}
-                            </span>
-                            <span className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium ${rainfallUi.badgeClass}`}>
-                              {rainfallUi.label}
-                            </span>
+                        <div className="flex items-center gap-4">
+                          <RainCloud3D className="farm-overview-animated-svg h-12 w-12 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-600">Expected Rainfall · Next 7 Days</p>
+                            <div className="mt-2 flex flex-wrap items-center gap-3">
+                              <span className="font-display text-2xl font-bold text-slate-950 sm:text-3xl">
+                                {formatValue(displayedRainfallSummary.totalRainfall, ' mm')}
+                              </span>
+                              <span className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium ${rainfallUi.badgeClass}`}>
+                                {rainfallUi.label}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                      <Card className="border border-sky-100 bg-gradient-to-br from-sky-50 to-white shadow-sm">
-                        <CardContent className="px-6 py-5 sm:px-7 sm:py-6">
-                          <p className="text-sm font-medium text-slate-600">Total Rainfall</p>
-                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(displayedRainfallSummary.totalRainfall, ' mm')}</p>
-                        </CardContent>
-                      </Card>
-                      <Card className="border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white shadow-sm">
-                        <CardContent className="px-6 py-5 sm:px-7 sm:py-6">
-                          <p className="text-sm font-medium text-slate-600">Rainy Days Count</p>
-                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(displayedRainfallSummary.rainyDays)}</p>
-                        </CardContent>
-                      </Card>
-                      <Card className="border border-amber-100 bg-gradient-to-br from-amber-50 to-white shadow-sm">
-                        <CardContent className="px-6 py-5 sm:px-7 sm:py-6">
-                          <p className="text-sm font-medium text-slate-600">Dry Days Count</p>
-                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(displayedRainfallSummary.dryDays)}</p>
-                        </CardContent>
-                      </Card>
-                      <Card className="border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white shadow-sm">
-                        <CardContent className="px-6 py-5 sm:px-7 sm:py-6">
-                          <p className="text-sm font-medium text-slate-600">Average Rainfall per Day</p>
-                            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{formatValue(displayedRainfallSummary.avgPerDay, ' mm')}</p>
-                        </CardContent>
-                      </Card>
-                    </div>
-
                     <Card className="w-full max-w-full overflow-hidden border border-sky-100 bg-gradient-to-br from-sky-50 to-white shadow-sm">
                       <CardHeader>
-                      <CardTitle className="text-slate-900">Rainfall Forecast for the Next 7 Days</CardTitle>
+                        <CardTitle className="font-display text-slate-900">Daily Rainfall Forecast</CardTitle>
                         <CardDescription className="text-slate-700">
-                          Forecast rainfall from the weather API, shown day by day. This is not a calibrated rain-gauge reading.
+                          Expected rainfall in millimeters, shown by day.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -1240,8 +1240,7 @@ export default function HistoricalData() {
                           <BarChart data={displayedRainfallData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                             <XAxis dataKey="time" stroke="#64748b" style={{ fontSize: '12px' }} />
-                            <YAxis yAxisId="left" stroke="#64748b" style={{ fontSize: '12px' }} label={{ value: 'Daily (mm)', angle: -90, position: 'insideLeft' }} />
-                            <YAxis yAxisId="right" orientation="right" stroke="#64748b" style={{ fontSize: '12px' }} label={{ value: 'Cumulative (mm)', angle: 90, position: 'insideRight' }} />
+                            <YAxis stroke="#64748b" style={{ fontSize: '12px' }} label={{ value: 'Daily (mm)', angle: -90, position: 'insideLeft' }} />
                             <Tooltip
                               formatter={(value, name) => {
                                 if (name === 'Daily Rainfall') {
@@ -1253,144 +1252,13 @@ export default function HistoricalData() {
                               }}
                               contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '16px' }}
                             />
-                            <Legend />
-                            <Bar yAxisId="left" dataKey="rainfall" fill="#0ea5e9" name="Daily Rainfall" radius={[10, 10, 0, 0]} />
-                            <Line
-                              yAxisId="right"
-                              type="monotone"
-                              dataKey="cumulative"
-                              stroke="#8b5cf6"
-                              strokeWidth={3}
-                              name="Cumulative"
-                              activeDot={{ r: 7, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 3 }}
-                            />
+                            <Bar dataKey="rainfall" fill="#0ea5e9" name="Daily Rainfall" radius={[10, 10, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="border border-slate-200 bg-white shadow-sm">
-                      <CardHeader>
-                        <CardTitle className="text-slate-900">What this means</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
-                          <p className="font-medium text-emerald-900">What this means:</p>
-                          <p className="mt-2">{rainfallMeaning}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.05fr,0.95fr]">
-                      <Card className="border border-slate-200 bg-white shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="text-slate-900">Key Highlights</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-sm text-slate-700">
-                          <div className="grid grid-cols-[minmax(0,1fr)_120px] items-start gap-3">
-                            <span className="min-w-0">Highest Rainfall</span>
-                            <span className="w-[120px] whitespace-normal break-normal text-right font-semibold text-slate-900">
-                              {displayedRainfallSummary.peakDay?.time || 'No data'} ({formatValue(displayedRainfallSummary.peakDay?.rainfall, ' mm')})
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-[minmax(0,1fr)_120px] items-start gap-3">
-                            <span className="min-w-0">Lowest Rainfall</span>
-                            <span className="w-[120px] whitespace-normal break-normal text-right font-semibold text-slate-900">
-                              {displayedRainfallSummary.lowestDay?.time || 'No data'} ({formatValue(displayedRainfallSummary.lowestDay?.rainfall, ' mm')})
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-[minmax(0,1fr)_120px] items-start gap-3">
-                            <span className="min-w-0">Most Consistent Day Range</span>
-                            <span className="w-[120px] whitespace-normal break-normal text-right font-semibold text-slate-900">
-                              {displayedRainfallSummary.consistentRange?.start
-                                ? `${displayedRainfallSummary.consistentRange.start}${displayedRainfallSummary.consistentRange.end && displayedRainfallSummary.consistentRange.end !== displayedRainfallSummary.consistentRange.start ? `-${displayedRainfallSummary.consistentRange.end}` : ''}`
-                                : 'No sustained range'}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="border border-slate-200 bg-white shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="text-slate-900">Weekly / Period Comparison</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-sm text-slate-700">
-                          <div className="flex items-center justify-between">
-                            <span>This Period</span>
-                            <span className="font-semibold text-slate-900">{formatValue(displayedRainfallSummary.totalRainfall, ' mm')}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span>Previous Period</span>
-                            <span className="font-semibold text-slate-900">{formatValue(displayedRainfallSummary.previousPeriodTotal, ' mm')}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span>Change</span>
-                            <span className={`font-semibold ${Number(displayedRainfallSummary.changeFromPrevious || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                              {Number(displayedRainfallSummary.changeFromPrevious || 0) >= 0 ? '+' : ''}{formatValue(displayedRainfallSummary.changeFromPrevious, ' mm')}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[0.95fr,1.05fr]">
-                      <Card className="border border-slate-200 bg-white shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="text-slate-900">Rainfall Distribution</CardTitle>
-                          <CardDescription className="text-slate-600">
-                            Share of rainy days versus dry days.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="h-4 overflow-hidden rounded-full bg-slate-100">
-                            <div className="flex h-full w-full">
-                              <div
-                                className="bg-sky-500 transition-all duration-500"
-                                style={{ width: `${displayedRainfallSummary.distribution?.rainyPercent || 0}%` }}
-                              />
-                              <div
-                                className="bg-amber-300 transition-all duration-500"
-                                style={{ width: `${displayedRainfallSummary.distribution?.dryPercent || 0}%` }}
-                              />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                            <div className="rounded-xl bg-sky-50 p-3 text-sky-800">
-                              <p className="font-medium">Rainy</p>
-                              <p className="mt-1 text-lg font-semibold">{formatValue(displayedRainfallSummary.distribution?.rainyPercent, '%')}</p>
-                            </div>
-                            <div className="rounded-xl bg-amber-50 p-3 text-amber-800">
-                              <p className="font-medium">Dry</p>
-                              <p className="mt-1 text-lg font-semibold">{formatValue(displayedRainfallSummary.distribution?.dryPercent, '%')}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="border border-slate-200 bg-white shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="text-slate-900"> Recommendation</CardTitle>
-                          <CardDescription className="text-slate-600">
-                            Whole-system summary generated from the selected historical data.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {nlpSummary ? (
-                            <>
-                              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                                {nlpSummary}
-                              </div>
-                              <p className="text-xs text-slate-500">
-                                Source: {nlpSource === 'ai' ? 'AI recommendation' : 'Fallback local recommendation'}
-                              </p>
-                            </>
-                          ) : (
-                            <p className="text-sm text-slate-500">No  recommendation yet for this range.</p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
                   </TabsContent>
 
                   <TabsContent value="humidity-detail" className="w-full min-w-0 max-w-full overflow-x-hidden space-y-4">
@@ -1523,7 +1391,7 @@ export default function HistoricalData() {
                     <Card className="w-full min-w-0 max-w-full overflow-hidden border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white shadow-sm">
                       <CardHeader>
                           <CardTitle className="flex items-center gap-2 text-base text-slate-900">
-                            <span className="h-7 w-7"><Leaf3D /></span>
+                            <span className="h-7 w-7"><Leaf3D className="transition-transform duration-300 hover:-translate-y-0.5 hover:scale-110 motion-reduce:transition-none" /></span>
                           Leaf Detection Activity
                         </CardTitle>
                         <CardDescription className="text-slate-700">
@@ -1591,7 +1459,7 @@ export default function HistoricalData() {
                     <Card className="w-full min-w-0 max-w-full overflow-hidden border border-orange-100 bg-gradient-to-br from-orange-50 to-white shadow-sm">
                       <CardHeader>
                           <CardTitle className="flex items-center gap-2 text-base text-slate-900">
-                            <span className="h-7 w-7"><Leaf3D /></span>
+                            <span className="h-7 w-7"><Rambutan3D className="transition-transform duration-300 hover:-translate-y-0.5 hover:scale-110 motion-reduce:transition-none" /></span>
                           Fruit Maturity Activity
                         </CardTitle>
                         <CardDescription className="text-slate-700">
@@ -1655,11 +1523,154 @@ export default function HistoricalData() {
                     </div>
                   </TabsContent>
                   </div>
+                    </div>
+                    <aside className="farm-overview-risk-guide min-w-0 rounded-[18px] border border-[#E2ECE6] bg-white p-5 shadow-sm sm:p-6">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900 sm:text-[17px]">
+                            {language === 'tl' ? 'Gabay sa Panganib at Aksyon' : 'Farm Risk & Action Guide'}
+                          </h3>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {language === 'tl' ? 'Batay sa mga tala sa napiling panahon.' : 'Based on recorded data for this period.'}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-[#DCFCE7] px-3 py-1 text-[11px] font-semibold text-[#166534]">{rangeLabel}</span>
+                      </div>
+
+                      <div className="mt-4 space-y-3">
+                        <article className="rounded-2xl border border-[#E2ECE6] bg-[#F8FAF9] p-3.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[13px] font-bold text-slate-900">{language === 'tl' ? 'Panganib ng Sakit' : 'Disease Pressure'}</span>
+                            <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${riskUi.badgeClass}`}>
+                              {riskUi.label}{summary.currentRisk == null ? '' : ` · ${formatValue(summary.currentRisk, '%')}`}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+                            {summary.currentRisk == null
+                              ? (language === 'tl' ? 'Walang sapat na environmental history para matukoy ang risk sa panahong ito.' : 'There is not enough environmental history to estimate risk for this period.')
+                              : (language === 'tl' ? 'Tantya ito mula sa naitalang environmental history, hindi diagnosis ng halaman.' : 'This estimate uses recorded environmental history; it is not a plant diagnosis.')}
+                          </p>
+                        </article>
+
+                        <article className="rounded-2xl border border-[#E2ECE6] bg-[#F8FAF9] p-3.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[13px] font-bold text-slate-900">{language === 'tl' ? 'Pagsubaybay sa Halumigmig' : 'Humidity Watch'}</span>
+                            <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${humidityUi.badgeClass}`}>
+                              {humidityUi.label}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+                            {summary.avgHumidity == null
+                              ? (language === 'tl' ? 'Walang humidity history para sa napiling panahon.' : 'No humidity history is available for this period.')
+                              : summary.avgHumidity > 80
+                                ? (language === 'tl' ? 'Mataas ang average humidity. Suriin ang mga dahon sa siksik o malilim na bahagi ng puno.' : 'Average humidity is above 80%. Check leaves in dense or shaded parts of the canopy.')
+                                : (language === 'tl' ? 'Magpatuloy sa regular na pagsusuri ng mga dahon.' : 'Continue routine checks for changes in leaf condition.')}
+                          </p>
+                        </article>
+
+                        <article className="rounded-2xl border border-[#E2ECE6] bg-[#F8FAF9] p-3.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[13px] font-bold text-slate-900">{language === 'tl' ? 'Ulan sa Forecast' : 'Rainfall Outlook'}</span>
+                            <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${rainfallUi.badgeClass}`}>
+                              {formatValue(displayedRainfallSummary.totalRainfall, ' mm', language === 'tl' ? 'Walang datos' : 'Unavailable')}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+                            {language === 'tl' ? 'Kabuuang ulan mula sa forecast para sa napiling panahon.' : 'Expected rainfall total from the forecast for the selected period.'}
+                          </p>
+                        </article>
+                      </div>
+
+                      <div className="mt-4 border-t border-slate-100 pt-3.5">
+                        <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                          {language === 'tl' ? 'MGA BUOD SA PANAHON' : 'PERIOD SUMMARY HIGHLIGHTS'}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div className="rounded-xl border border-[#E2ECE6] bg-[#F8FAF9] px-3 py-2">
+                            <p className="text-[11px] text-slate-500">{language === 'tl' ? 'Pinakamalakas na Ulan' : 'Heaviest Rain'}</p>
+                            <p className="mt-0.5 text-xs font-bold text-slate-900">
+                              {displayedRainfallSummary.peakDay
+                                ? `${displayedRainfallSummary.peakDay.time} · ${formatValue(displayedRainfallSummary.peakDay.rainfall, ' mm')}`
+                                : (language === 'tl' ? 'Walang datos' : 'Unavailable')}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-[#E2ECE6] bg-[#F8FAF9] px-3 py-2">
+                            <p className="text-[11px] text-slate-500">{language === 'tl' ? 'Ulat' : 'Report Status'}</p>
+                            <p className="mt-0.5 text-xs font-bold text-[#1D6F42]">{language === 'tl' ? 'Handa i-export' : 'PDF Export Ready'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </aside>
+                  </div>
                 </Tabs>
               </CardContent>
           </Card>
         </>
       )}
+
+      {hasAnyData && (
+        <Card className="border border-[#E2ECE6] bg-white shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base text-slate-900">{language === 'tl' ? 'Buod ng Buong Sistema' : 'Whole-System Summary'}</CardTitle>
+            <CardDescription className="text-sm text-slate-600">
+              {language === 'tl'
+                ? 'Pinagsamang buod ng environmental monitoring, disease scans, at maturity checks para sa napiling panahon.'
+                : 'Combined summary from environmental monitoring, disease scans, and maturity checks for this period.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pb-6 pt-0">
+            <div className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-cyan-50 p-4 sm:p-5">
+              <p className="text-sm font-semibold text-emerald-900">{language === 'tl' ? 'Buod ng kalagayan ng bukid' : 'Overall System Narrative'}</p>
+              <p className="mt-2 text-sm leading-7 text-slate-700">
+                {nlpSummary || (language === 'tl' ? 'Wala pang buod para sa napiling panahon.' : 'No whole-system narrative is available for this period yet.')}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <section aria-label={language === 'tl' ? 'Mga tala ng bukid' : 'Farm logs'} className="rounded-[18px] border border-[#E2ECE6] bg-white p-3 shadow-sm sm:p-5">
+        <Tabs value={activeLogCategory} onValueChange={setActiveLogCategory} className="w-full">
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-none border-b border-slate-100 bg-transparent p-0 pb-3">
+            <TabsTrigger
+              value="sensors"
+              className="group inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#E2ECE6] bg-[#F8FAF9] px-4 py-2 text-xs font-semibold text-slate-700 data-[state=active]:border-[#114228] data-[state=active]:bg-[#114228] data-[state=active]:text-white sm:text-[13px]"
+            >
+              <Thermometer3D className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110" />
+              {language === 'tl' ? 'Mga Reading ng Sensor' : 'Sensor Readings'}
+            </TabsTrigger>
+            <TabsTrigger
+              value="leaf-scans"
+              className="group inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#E2ECE6] bg-[#F8FAF9] px-4 py-2 text-xs font-semibold text-slate-700 data-[state=active]:border-[#114228] data-[state=active]:bg-[#114228] data-[state=active]:text-white sm:text-[13px]"
+            >
+              <Leaf3D className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110" />
+              <span>{language === 'tl' ? 'Mga Scan ng Sakit sa Dahon' : 'Leaf Disease Scans'}</span>
+              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] leading-none text-slate-700 group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white">
+                {savedPredictionCounts?.leaf ?? leafSummary.totalScans ?? 0}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="maturity-scans"
+              className="group inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#E2ECE6] bg-[#F8FAF9] px-4 py-2 text-xs font-semibold text-slate-700 data-[state=active]:border-[#114228] data-[state=active]:bg-[#114228] data-[state=active]:text-white sm:text-[13px]"
+            >
+              <Rambutan3D className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110" />
+              <span>{language === 'tl' ? 'Mga Scan ng Pagkahinog' : 'Maturity Assessment Scans'}</span>
+              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] leading-none text-slate-700 group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white">
+                {savedPredictionCounts?.maturity ?? fruitSummary.totalScans ?? 0}
+              </span>
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="sensors" className="mt-4">
+            <SensorReadings />
+          </TabsContent>
+          <TabsContent value="leaf-scans" className="mt-4">
+            <PredictionTransactions predictionType="leaf" onCountsChange={setSavedPredictionCounts} />
+          </TabsContent>
+          <TabsContent value="maturity-scans" className="mt-4">
+            <PredictionTransactions predictionType="rambutan" onCountsChange={setSavedPredictionCounts} />
+          </TabsContent>
+        </Tabs>
+      </section>
     </div>
   );
 }
