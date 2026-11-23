@@ -25,6 +25,12 @@ const translations = {
     errorEmail: "Please enter a valid email address.",
     errorPassword: "Password must be at least 8 characters.",
     errorConfirm: "Passwords do not match.",
+    passwordHint: "Use at least 8 characters. Avoid sharing your password with anyone.",
+    agreement: "I agree to the Terms of Use and understand I’ll review the Data Privacy Notice after email verification.",
+    terms: "Terms of Use",
+    termsDetails: "Use RAMBUTECH to support your farm monitoring. Weather, disease, and maturity results are estimates for guidance and should be checked against what you observe on the farm. Do not use the system as the only basis for urgent safety or crop-treatment decisions.",
+    privacyFollowUp: "This acknowledgment does not replace the required Data Privacy Notice consent shown after email verification.",
+    submitting: "Creating account...",
     login: "Already have an account? Log in",
   },
   tl: {
@@ -42,6 +48,12 @@ const translations = {
     errorEmail: "Pakilagay ng wastong email address.",
     errorPassword: "Dapat hindi bababa sa 8 karakter ang password.",
     errorConfirm: "Hindi magkatugma ang password.",
+    passwordHint: "Gumamit ng hindi bababa sa 8 karakter. Huwag ibahagi kaninuman ang iyong password.",
+    agreement: "Sumasang-ayon ako sa Mga Tuntunin sa Paggamit at uunawain ko ang Data Privacy Notice pagkatapos ma-verify ang email.",
+    terms: "Mga Tuntunin sa Paggamit",
+    termsDetails: "Gamitin ang RAMBUTECH bilang suporta sa pagsubaybay sa bukid. Mga pagtatantiya lamang para sa gabay ang weather, disease, at maturity results at dapat ikumpara sa aktuwal na obserbasyon sa bukid. Huwag gamitin ang system bilang nag-iisang batayan para sa agarang kaligtasan o desisyon sa paggamot ng pananim.",
+    privacyFollowUp: "Hindi kapalit ng pagkilála at pahintulot sa Data Privacy Notice ang pag-check dito. Ipapakita iyon pagkatapos ma-verify ang email.",
+    submitting: "Ginagawa ang account...",
     login: "May account na? Mag-login",
   },
 };
@@ -60,6 +72,8 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
   const [backendUp, setBackendUp] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // OTP verification step (code emailed via Gmail after signup)
   const [stage, setStage] = useState("form"); // 'form' | 'otp'
@@ -111,11 +125,15 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
       setError(t.errorConfirm);
       return;
     }
+    if (!termsAccepted) {
+      setError(t.error);
+      return;
+    }
     setError("");
+    setIsSubmitting(true);
 
     // Send signup data to backend
     const url = '/api/signup/';
-    console.debug('Signup request', url, { email: normalizedContact, name: normalizedName });
     try {
       const res = await apiFetch(url, {
         method: "POST",
@@ -143,11 +161,18 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
     } catch (err) {
       console.error('Signup fetch error', err);
       setError("Unable to connect to server.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleGoogleSignIn = async (credential) => {
+    if (!termsAccepted) {
+      setError(t.error);
+      return;
+    }
     setError("");
+    setIsSubmitting(true);
     try {
       const res = await apiFetch('/api/auth/google/', {
         method: "POST",
@@ -159,6 +184,8 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
       onSignup({ role: "farmer", email: result.email, name: result.name, username: result.username });
     } catch (err) {
       setError(err.message || "Google sign-in failed.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -221,11 +248,15 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
   };
 
   return (
-    <AuthShell language={language} onLanguageChange={changeLanguage}>
+    <AuthShell
+      language={language}
+      onLanguageChange={changeLanguage}
+      badge={language === 'tl' ? 'Pagpaparehistro ng Magsasaka' : 'Farmer Registration'}
+    >
       {stage === 'otp' ? (
         <div className="space-y-5">
           <div>
-            <h1 className="text-[26px] font-extrabold tracking-tight text-stone-900 sm:text-3xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <h1 className="auth-heading text-[26px] font-extrabold tracking-tight text-stone-900 sm:text-3xl">
               {language === 'tl' ? 'Tingnan ang iyong email' : 'Check your email'}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-stone-600">{otpInfo || `We sent a verification code to ${otpEmail}.`}</p>
@@ -271,7 +302,7 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
       ) : (
         <div>
           <div className="mb-6">
-            <h1 className="text-2xl font-extrabold tracking-tight text-stone-900 sm:text-3xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <h1 className="auth-heading text-2xl font-extrabold tracking-tight text-stone-900 sm:text-3xl">
               {language === 'tl' ? t.title : 'Create Farmer Account'}
             </h1>
             <p className="mt-2 text-[15px] text-stone-600">
@@ -286,7 +317,7 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
             </div>
           )}
 
-          <GoogleSignInButton onCredential={handleGoogleSignIn} />
+          <GoogleSignInButton onCredential={handleGoogleSignIn} disabled={!termsAccepted || isSubmitting} />
           <div className="my-5 flex items-center gap-3">
             <span className="h-px flex-1 bg-[#D6D3CD]" />
             <span className="text-xs font-semibold uppercase tracking-wider text-stone-600">{language === 'tl' ? 'o gamitin ang email' : 'or use email'}</span>
@@ -328,6 +359,7 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"
+                  aria-describedby="signup-password-hint"
                   className="min-h-[50px] rounded-xl border border-[#D6D3CD] bg-white px-4 pr-14 text-[15px] focus-visible:border-[#14532D] focus-visible:ring-4 focus-visible:ring-emerald-600/20"
                   required
                 />
@@ -335,6 +367,7 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+              <p id="signup-password-hint" className="text-xs leading-relaxed text-stone-500">{t.passwordHint}</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="signupConfirmPassword" className="text-sm font-bold text-stone-800">{t.confirm}</Label>
@@ -354,9 +387,35 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
               </div>
             </div>
 
+            <div className="space-y-2 rounded-2xl border border-stone-200 bg-stone-50 p-3.5">
+              <details className="group">
+                <summary className="min-h-10 cursor-pointer list-none rounded-lg py-2 text-sm font-bold text-[#14532D] outline-none focus-visible:ring-2 focus-visible:ring-[#14532D] [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center justify-between gap-3">
+                    {t.terms}
+                    <span aria-hidden="true" className="text-lg leading-none transition-transform group-open:rotate-180">⌄</span>
+                  </span>
+                </summary>
+                <p className="pb-2 text-xs leading-relaxed text-stone-600">{t.termsDetails}</p>
+              </details>
+              <label className="flex cursor-pointer items-start gap-3 border-t border-stone-200 pt-3 text-sm leading-relaxed text-stone-700">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(event) => {
+                    setTermsAccepted(event.target.checked);
+                    setError("");
+                  }}
+                  className="mt-0.5 h-5 w-5 shrink-0 accent-[#14532D] focus:ring-2 focus:ring-[#14532D]"
+                  required
+                />
+                <span>{t.agreement}</span>
+              </label>
+              <p className="pl-8 text-xs leading-relaxed text-stone-500">{t.privacyFollowUp}</p>
+            </div>
+
             {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-            <Button type="submit" className="min-h-[52px] w-full rounded-xl bg-[#14532D] text-[15px] font-bold text-white shadow-lg shadow-emerald-950/20 hover:bg-[#0F3F22]">
-              {t.button}
+            <Button type="submit" disabled={isSubmitting || !termsAccepted} className="min-h-[52px] w-full rounded-xl bg-[#14532D] text-[15px] font-bold text-white shadow-lg shadow-emerald-950/20 hover:bg-[#0F3F22] disabled:cursor-not-allowed disabled:opacity-60">
+              {isSubmitting ? t.submitting : t.button}
             </Button>
           </form>
 

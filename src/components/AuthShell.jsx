@@ -1,4 +1,5 @@
-import { Leaf, ShieldCheck } from 'lucide-react';
+import { Activity, CloudSun, Leaf, ShieldCheck } from 'lucide-react';
+import appLogo from '../assets/app-logo.png';
 
 function RambutanIllustration() {
   return (
@@ -30,52 +31,52 @@ export default function AuthShell({
       <main className="auth-shell-card mx-auto overflow-hidden bg-[#F2F0E8] shadow-2xl">
         <aside
           className="auth-shell-aside relative overflow-hidden text-white"
-          style={{
-            backgroundColor: '#14532D',
-            backgroundImage: 'radial-gradient(rgba(255,255,255,.08) 1.5px, transparent 1.5px)',
-            backgroundSize: '24px 24px',
-          }}
         >
           <div className="relative z-10 flex items-center gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/25 bg-white/15">
-              <Leaf className="h-7 w-7 text-emerald-200" aria-hidden="true" />
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 p-2">
+              <img src={appLogo} alt="" className="h-full w-full object-contain" />
             </span>
             <div className="min-w-0">
-              <span className="block text-xl font-extrabold tracking-wide text-white sm:text-2xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              <span className="auth-brand-name block text-xl font-extrabold tracking-wide text-white sm:text-2xl">
                 RAMBUTECH
               </span>
               <span className="mt-1 block text-xs font-medium text-emerald-100 sm:text-sm">
-                {isTagalog ? 'Proteksyon at Pagsusuri ng Pananim' : 'Farm Resilience & Disease Detection'}
+                {isTagalog ? 'Matalinong Pagsubaybay sa Bukid' : 'Smart Rambutan Farm Monitoring'}
               </span>
             </div>
           </div>
 
-          <div className="relative z-10 my-5 rounded-2xl border border-emerald-300/25 bg-emerald-950/50 p-4 backdrop-blur-sm sm:p-5 lg:my-0">
-            <div className="flex items-center gap-4">
-              <div className="h-20 w-20 shrink-0 rounded-2xl bg-gradient-to-br from-amber-50 to-emerald-100 p-1.5 shadow-md sm:h-28 sm:w-28">
+          <div className="auth-shell-showcase relative z-10 my-5 rounded-3xl border border-white/15 bg-[#0F4229]/70 p-4 sm:p-6 lg:my-0">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <div className="h-20 w-20 shrink-0 rounded-2xl bg-[#F4F7EF] p-1.5 sm:h-28 sm:w-28">
                 <RambutanIllustration />
               </div>
               <div className="min-w-0 space-y-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-400/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-100">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-100">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" aria-hidden="true" />
                   {isTagalog ? 'Gabay sa Rambutan Farm' : 'Smart Orchard Care'}
                 </span>
-                <h2 className="text-base font-bold leading-snug text-white sm:text-lg" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                  {isTagalog ? 'Pangalagaan nang maaga ang iyong ani.' : 'Protect your rambutan harvest early.'}
+                <h2 className="auth-heading text-base font-bold leading-snug text-white sm:text-lg">
+                  {isTagalog ? 'Mas maagang pag-alaga. Mas handang ani.' : 'Better care starts with better farm insights.'}
                 </h2>
-                <p className="hidden text-xs leading-relaxed text-emerald-100/90 sm:block sm:text-sm">
+                <p className="hidden text-xs leading-relaxed text-emerald-50/80 sm:block sm:text-sm">
                   {isTagalog
-                    ? 'Suriin ang dahon at bunga upang makita agad ang sakit at makakuha ng praktikal na gabay.'
-                    : 'Scan leaves and fruit to spot diseases early and get practical care guidance.'}
+                    ? 'Subaybayan ang kondisyon ng bukid, suriin ang mga dahon at bunga, at gumamit ng praktikal na gabay.'
+                    : 'Monitor field conditions, assess leaves and fruit, and get practical guidance for your orchard.'}
                 </p>
               </div>
+            </div>
+            <div className="mt-5 grid grid-cols-3 gap-2 border-t border-white/10 pt-4 text-[11px] font-semibold text-emerald-50 sm:gap-3 sm:text-xs">
+              <span className="flex items-center gap-1.5"><Activity className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />{isTagalog ? 'Mga Sensor' : 'Sensors'}</span>
+              <span className="flex items-center gap-1.5"><CloudSun className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />{isTagalog ? 'Panahon' : 'Weather'}</span>
+              <span className="flex items-center gap-1.5"><Leaf className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />{isTagalog ? 'Pagsusuri' : 'Crop scans'}</span>
             </div>
           </div>
 
           <div className="relative z-10 hidden items-center justify-between border-t border-white/15 pt-4 text-xs text-emerald-100/80 lg:flex">
             <span className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {isTagalog ? 'Para sa pangangalaga ng bukid' : 'Built for orchard care'}
+              {isTagalog ? 'Para sa matalinong pag-aalaga ng bukid' : 'Designed for confident orchard care'}
             </span>
             <span className="font-semibold text-white">RAMBUTECH</span>
           </div>

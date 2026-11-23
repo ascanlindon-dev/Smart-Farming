@@ -232,6 +232,7 @@ const PrototypeApp = ({ onBack, currentUser }) => {
   const [unreadNotificationIds, setUnreadNotificationIds] = useState([]);
   const [isTabSwitchLocked, setIsTabSwitchLocked] = useState(false);
   const appTabsRef = useRef(null);
+  const toastedNotificationIdsRef = useRef(new Set());
   const notifications = useMemo(
     () => [...customNotifications, ...systemNotifications].filter((notification) => !dismissedNotificationIds.includes(notification.id)),
     [customNotifications, systemNotifications, dismissedNotificationIds],
@@ -265,6 +266,27 @@ const PrototypeApp = ({ onBack, currentUser }) => {
       return next.filter((id) => notifications.some((notification) => notification.id === id));
     });
   }, [notifications]);
+
+  useEffect(() => {
+    notifications.forEach((notification) => {
+      if (toastedNotificationIdsRef.current.has(notification.id)) return;
+      toastedNotificationIdsRef.current.add(notification.id);
+
+      const showToast = notification.severity === 'high' ? toast.error : toast.warning;
+      showToast(notification.title, {
+        description: notification.description,
+        duration: 10000,
+        closeButton: true,
+        action: {
+          label: language === 'tl' ? 'Tingnan' : 'View',
+          onClick: () => {
+            if (isTabSwitchLocked && notification.tab !== activeTab) return;
+            setActiveTab(notification.tab);
+          },
+        },
+      });
+    });
+  }, [activeTab, isTabSwitchLocked, language, notifications]);
 
   useEffect(() => {
     try {
@@ -560,76 +582,6 @@ const PrototypeApp = ({ onBack, currentUser }) => {
       ...prev.slice(0, 9),
     ]);
   };
-
-  // Show a weather toast only when the live API reports a real severe condition.
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadWeatherToast = async () => {
-      const weatherQuery = location.trim();
-      if (!weatherQuery) return;
-      try {
-        const response = await apiFetch(`/api/weather/?q=${encodeURIComponent(weatherQuery)}&days=2`);
-        if (!response.ok) return;
-
-        const data = await response.json();
-        if (cancelled || data?.ok === false || data?.stale) return;
-
-        const today = Array.isArray(data.forecast) ? data.forecast[0] : null;
-        if (!today) return;
-
-        const rainfall = Number(today.rainfall ?? 0);
-        const highTemp = Number(today.temperature?.max ?? 0);
-        const wind = Number(today.wind ?? 0);
-        const condition = String(today.condition || '').toLowerCase();
-
-        let title = '';
-        let description = '';
-
-        if (rainfall >= 20 || condition.includes('thunder')) {
-          title = language === 'tl' ? 'Maghanda sa Ulan' : 'Prepare for Rain';
-          description =
-            language === 'tl'
-              ? 'Maaaring lumakas ang ulan ngayon. Iwasan munang mag-spray o mag-ani habang maulan.'
-              : 'Rain may become heavy today. Avoid spraying or harvesting while it is rainy.';
-        } else if (wind >= 45) {
-          title = language === 'tl' ? 'Babala sa Malakas na Hangin' : 'Strong Wind Alert';
-          description =
-            language === 'tl'
-              ? `Maaaring umabot sa ${wind} km/h ang hangin ngayong araw. Siguraduhin ang suporta ng mga batang puno.`
-              : `Winds may reach ${wind} km/h today. Secure supports for young trees.`;
-        } else if (highTemp >= 38) {
-          title = language === 'tl' ? 'Babala sa Matinding Init' : 'Extreme Heat Alert';
-          description =
-            language === 'tl'
-              ? `Maaaring umabot sa ${highTemp}°C ang init ngayong araw. Bantayan ang stress ng halaman at pagkatuyo ng lupa.`
-              : `Heat may reach ${highTemp}°C today. Watch for plant stress and soil dryness.`;
-        }
-
-        if (!title || !description) return;
-
-        toast.error(title, {
-          description,
-          duration: 10000,
-          closeButton: true,
-          style: {
-            background: '#dc2626',
-            color: '#ffffff',
-            border: '2px solid #991b1b',
-            fontSize: '14px',
-          },
-          className: 'text-white',
-        });
-      } catch (error) {
-        // Do not show a fake alert when live weather data is unavailable.
-      }
-    };
-
-    loadWeatherToast();
-    return () => {
-      cancelled = true;
-    };
-  }, [language, location]);
 
   return (
     <div className={`min-h-screen ${activeTab === 'dashboard' || activeTab === 'monitoring' ? 'bg-[#FAF9F5] text-[#1C1917]' : 'bg-[#edf6f2] text-slate-800'}`}>

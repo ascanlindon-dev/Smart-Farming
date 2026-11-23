@@ -20,6 +20,9 @@ body {
 
 .auth-shell-frame {
   min-height: 100svh;
+  background:
+    radial-gradient(ellipse at 12% 8%, rgb(34 98 62 / 12%), transparent 34rem),
+    #f3f5f0;
 }
 
 .auth-shell-card {
@@ -27,14 +30,18 @@ body {
   display: flex;
   min-height: 100svh;
   flex-direction: column;
+  background: #fff;
 }
 
 .auth-shell-aside {
   display: flex;
-  min-height: 245px;
+  min-height: 230px;
   flex-direction: column;
   justify-content: space-between;
   padding: 20px;
+  background:
+    radial-gradient(ellipse at 88% 8%, rgb(114 178 118 / 18%), transparent 45%),
+    #14532d;
 }
 
 .auth-shell-section {
@@ -43,6 +50,7 @@ body {
   flex: 1 1 auto;
   flex-direction: column;
   padding: 20px;
+  background: #fff;
 }
 
 .auth-shell-content {
@@ -51,33 +59,46 @@ body {
   flex: 1 1 auto;
   flex-direction: column;
   justify-content: center;
-  max-width: 400px;
+  max-width: 440px;
   margin-inline: auto;
+}
+
+.auth-shell-showcase {
+  box-shadow: 0 18px 48px rgb(3 35 21 / 16%);
+}
+
+.auth-shell-card .auth-brand-name,
+.auth-shell-card .auth-heading {
+  font-family: 'Nunito', sans-serif;
+  letter-spacing: normal;
 }
 
 .auth-google-button {
   width: 100%;
   min-height: 44px;
-  max-width: 400px;
+  max-width: 440px;
   margin-inline: auto;
 }
 
 @media (min-width: 640px) {
   .auth-shell-frame {
-    padding: 16px;
+    padding: 20px;
   }
 
   .auth-shell-card {
-    min-height: 640px;
-    border-radius: 24px;
+    min-height: min(760px, calc(100svh - 40px));
+    border: 1px solid #e6e9e3;
+    border-radius: 28px;
+    box-shadow: 0 24px 80px rgb(23 45 30 / 12%);
   }
 
   .auth-shell-aside {
-    padding: 28px 32px;
+    min-height: 280px;
+    padding: 32px;
   }
 
   .auth-shell-section {
-    padding: 28px 32px;
+    padding: 28px 40px;
   }
 }
 
@@ -95,25 +116,63 @@ body {
   .auth-shell-frame {
     display: flex;
     min-height: 100svh;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 24px;
   }
 
   .auth-shell-card {
     width: min(100%, 1280px);
-    min-height: min(720px, calc(100svh - 48px));
+    min-height: min(760px, calc(100svh - 48px));
     max-width: none;
     flex-direction: row;
+    align-items: stretch;
+    overflow: visible;
   }
 
   .auth-shell-aside {
-    width: 44%;
-    flex: 0 0 44%;
+    width: 42%;
+    flex: 0 0 42%;
+    border-radius: 28px 0 0 28px;
+    padding: 40px;
   }
 
   .auth-shell-section {
-    padding: 24px 64px;
+    min-width: 0;
+    padding: 32px clamp(36px, 5vw, 72px);
+    border-radius: 0 28px 28px 0;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 900px) {
+  .auth-shell-frame {
+    padding-block: 16px;
+  }
+
+  .auth-shell-card {
+    min-height: calc(100svh - 32px);
+  }
+
+  .auth-shell-section {
+    justify-content: flex-start;
+  }
+
+  .auth-shell-content {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 639px) {
+  .auth-shell-content {
+    justify-content: flex-start;
+  }
+
+  .auth-shell-aside {
+    min-height: 210px;
+  }
+
+  .auth-shell-section {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 }
 

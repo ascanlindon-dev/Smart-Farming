@@ -200,11 +200,15 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
   };
 
   return (
-    <AuthShell language={language} onLanguageChange={changeLanguage}>
+    <AuthShell
+      language={language}
+      onLanguageChange={changeLanguage}
+      badge={language === 'tl' ? 'Pag-sign in ng Magsasaka' : 'Farmer Sign In'}
+    >
       {stage === 'otp' ? (
         <div className="space-y-5">
           <div>
-            <h1 className="text-[26px] font-extrabold tracking-tight text-stone-900 sm:text-3xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <h1 className="auth-heading text-[26px] font-extrabold tracking-tight text-stone-900 sm:text-3xl">
               {language === 'tl' ? 'Tingnan ang iyong email' : 'Check your email'}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-stone-600">
@@ -258,7 +262,7 @@ export default function Login({ onLogin, onSwitchToSignup, onSwitchToForgot }) {
       ) : (
         <div>
           <div className="mb-6">
-            <h1 className="text-2xl font-extrabold tracking-tight text-stone-900 sm:text-3xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <h1 className="auth-heading text-2xl font-extrabold tracking-tight text-stone-900 sm:text-3xl">
               {language === 'tl' ? 'Maligayang Pagbabalik' : 'Welcome Back'}
             </h1>
             <p className="mt-2 text-[15px] text-stone-600">

@@ -33,7 +33,6 @@ import {
 } from './Environmental3DIcons';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import html2canvas from 'html2canvas';
 import PredictionTransactions from './PredictionTransactions';
 import SensorReadings from './SensorReadings';
 
@@ -59,6 +58,8 @@ const translations = {
     noData: 'No historical data available yet.',
     download: 'Download Summary',
     riskAnalysis: 'Risk Analysis',
+    scanCountsStale: 'Showing saved scan counts; the latest refresh failed.',
+    scanCountsUnavailable: 'Saved scan counts are unavailable.',
   },
   tl: {
     title: 'Pangkalahatang-ideya ng Bukid',
@@ -81,6 +82,8 @@ const translations = {
     noData: 'Wala pang historical data.',
     download: 'I-download ang Summary',
     riskAnalysis: 'Pagsusuri ng Panganib',
+    scanCountsStale: 'Ipinapakita ang naka-save na bilang ng scan; nabigo ang pinakabagong pag-refresh.',
+    scanCountsUnavailable: 'Hindi available ang naka-save na bilang ng scan.',
   },
 };
 
@@ -171,6 +174,13 @@ function mergeHistoryPayloads(sensorData = {}, predictionData = {}) {
     leafSummary: { ...emptyHistory.leafSummary, ...(predictionData.leafSummary || {}) },
     fruitSummary: { ...emptyHistory.fruitSummary, ...(predictionData.fruitSummary || {}) },
   };
+}
+
+function getSavedPredictionCounts(data) {
+  if (!Number.isInteger(data?.leaf_count) || !Number.isInteger(data?.fruit_count)) {
+    return null;
+  }
+  return { leaf: data.leaf_count, maturity: data.fruit_count };
 }
 
 function formatValue(value, suffix = '', fallbackText = 'No data') {
@@ -342,13 +352,18 @@ export default function HistoricalData({ location = '' }) {
   const { language } = useContext(LanguageContext);
   const t = translations[language] || translations.en;
   const [timeRange, setTimeRange] = useState('7days');
+  const savedPredictionsPath = '/api/predictions/transactions/?page_size=1&page=1';
   const [initialCache] = useState(() => ({
     sensors: readSessionData('/api/sensors/history/?range=7days'),
     predictions: readSessionData('/api/predictions/history/?range=7days'),
     weather: readSessionData('/api/weather/?q=Victoria%2C%20Oriental%20Mindoro%2C%20Philippines&days=7'),
+    savedPredictions: readSessionData(savedPredictionsPath),
   }));
   const [activeLogCategory, setActiveLogCategory] = useState('sensors');
-  const [savedPredictionCounts, setSavedPredictionCounts] = useState(null);
+  const [savedPredictionCounts, setSavedPredictionCounts] = useState(() => {
+    return getSavedPredictionCounts(initialCache.savedPredictions?.data);
+  });
+  const [savedPredictionCountsError, setSavedPredictionCountsError] = useState(false);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [appliedCustomRange, setAppliedCustomRange] = useState({ start: '', end: '' });
@@ -374,12 +389,38 @@ export default function HistoricalData({ location = '' }) {
   const tabsScrollLeftRef = useRef(0);
   const tabsTouchStartXRef = useRef(0);
 
-  // Refs used to snapshot each chart as an image for the PDF export
-  const temperatureChartRef = useRef(null);
-  const rainfallChartRef = useRef(null);
-  const humidityChartRef = useRef(null);
-  const leafChartRef = useRef(null);
-  const fruitChartRef = useRef(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    const cached = readSessionData(savedPredictionsPath);
+    const cachedCounts = getSavedPredictionCounts(cached?.data);
+    if (cachedCounts) setSavedPredictionCounts(cachedCounts);
+
+    async function loadSavedPredictionCounts() {
+      try {
+        const response = await apiFetch(savedPredictionsPath, {
+          signal: controller.signal,
+          cache: 'no-store',
+        });
+        if (!response.ok) throw new Error('Unable to load saved scan counts');
+        const result = await response.json();
+        const counts = getSavedPredictionCounts(result);
+        if (!counts) throw new Error('Invalid saved scan counts response');
+        if (!controller.signal.aborted) {
+          setSavedPredictionCounts(counts);
+          setSavedPredictionCountsError(false);
+          writeSessionData(savedPredictionsPath, result);
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setSavedPredictionCountsError(true);
+          if (!cachedCounts) setSavedPredictionCounts(null);
+        }
+      }
+    }
+
+    void loadSavedPredictionCounts();
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -675,18 +716,6 @@ export default function HistoricalData({ location = '' }) {
       ? `Humidity was high for ${highHumidityStreak} straight days. Check your plants for signs of disease.`
       : null;
 
-  const insights = [
-    summary.avgTemperature != null
-      ? `Temperature is ${summary.avgTemperature > 30 ? 'slightly above' : 'within'} the usual target range this ${rangeLabel.toLowerCase()}.`
-      : 'Temperature insight will appear once more environmental records are available.',
-    summary.avgHumidity != null
-      ? `${summary.avgHumidity >= 75 ? 'High humidity may increase disease risk' : 'Humidity levels look manageable'} based on the recorded sensor trend.`
-      : 'Humidity insight will appear once more sensor data is collected.',
-    summary.totalRainfall == null ? 'Measured rainfall data is unavailable for the selected period.' : summary.totalRainfall > 0
-      ? `${summary.rainyDays} rainy day${summary.rainyDays === 1 ? '' : 's'} contributed to ${summary.totalRainfall} mm total rainfall.`
-      : 'No meaningful rainfall was recorded for the selected period.',
-  ];
-
   const farmWeatherValue =
     summary.avgTemperature == null && summary.avgHumidity == null
       ? 'No farm weather data'
@@ -722,235 +751,429 @@ export default function HistoricalData({ location = '' }) {
     },
   ];
 
-  // ---------- PDF export helpers ----------
-  const captureChartImage = async (ref) => {
-    if (!ref.current) return null;
-    try {
-      const canvas = await html2canvas(ref.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-      });
-      return canvas.toDataURL('image/png');
-    } catch (error) {
-      console.error('Chart capture failed', error);
-      return null;
-    }
-  };
+  const handleDownloadSummary = () => {
+    const isTagalog = language === 'tl';
+    const pdfText = isTagalog
+      ? {
+          title: 'Buod ng Bukid',
+          subtitle: 'Mga tala at pagsusuri para sa napiling panahon',
+          generated: 'Ginawa noong',
+          period: 'Panahon ng tala',
+          atGlance: 'MABILIS NA BUOD',
+          metric: 'Sukatan',
+          result: 'Resulta',
+          meaning: 'Paliwanag',
+          averageTemperature: 'Karaniwang temperatura',
+          averageTemperatureMeaning: 'Average mula sa mga naitalang sensor reading.',
+          averageHumidity: 'Karaniwang halumigmig',
+          averageHumidityMeaning: 'Average mula sa mga naitalang sensor reading.',
+          rainfallForecast: 'Inaasahang ulan (forecast)',
+          rainfallRecorded: 'Naitalang ulan',
+          rainfallForecastMeaning: 'Kabuuan mula sa mga araw na available sa weather forecast; hindi aktuwal na sukat ng rain gauge.',
+          rainfallRecordedMeaning: 'Kabuuan mula sa mga naitalang sensor reading.',
+          diseaseRisk: 'Tantya ng panganib sa kapaligiran',
+          diseaseRiskMeaning: 'Tantya lamang mula sa environmental history; hindi diagnosis ng sakit ng halaman.',
+          leafScans: 'Mga scan ng sakit sa dahon',
+          leafScansMeaning: 'Bilang ng naka-save na leaf scan sa napiling panahon.',
+          fruitScans: 'Mga pagsusuri ng pagkahinog',
+          fruitScansMeaning: 'Bilang ng naka-save na fruit scan sa napiling panahon.',
+          interpretation: 'ANO ANG IBIG SABIHIN NG MGA TALA?',
+          noNarrative: 'Wala pang buod para sa napiling panahon.',
+          dailyRecords: 'MGA TALA NG SENSOR SA BAWAT ARAW',
+          forecastDetails: 'DETALYE NG FORECAST NG ULAN',
+          scanTransactions: 'MGA DETALYE NG BAWAT SCAN',
+          scanTransactionsMeaning: 'Bawat hanay ay isang scan na aktuwal na naka-save sa napiling panahon.',
+          scanType: 'Uri ng scan',
+          scanResult: 'Resulta',
+          confidence: 'Kumpiyansa',
+          dateAndTime: 'Petsa at oras',
+          imageReference: 'Pangalan ng larawan',
+          leafScan: 'Sakit sa dahon',
+          maturityScan: 'Pagkahinog ng bunga',
+          noImageReference: 'Walang pangalan',
+          noScans: 'Walang naka-save na scan sa napiling panahon.',
+          date: 'Petsa',
+          temperature: 'Temperatura (°C)',
+          humidity: 'Halumigmig (%)',
+          forecastRainfall: 'Ulan sa forecast (mm)',
+          environmentalRisk: 'Tantya ng panganib (%)',
+          riskNote: 'Ang tantya ng panganib ay hindi diagnosis ng sakit ng halaman.',
+          leafBreakdown: 'MGA RESULTA NG SCAN NG DAHON',
+          fruitBreakdown: 'MGA RESULTA NG PAGSUSURI NG BUNGA',
+          classification: 'Resulta',
+          count: 'Bilang',
+          totalScans: 'Kabuuang scan',
+          avgConfidence: 'Karaniwang kumpiyansa',
+          unavailable: 'Walang datos',
+          page: 'Pahina',
+          of: 'sa',
+        }
+      : {
+          title: 'Farm Overview Summary',
+          subtitle: 'Farm records and insights for the selected period',
+          generated: 'Generated',
+          period: 'Monitoring period',
+          atGlance: 'AT A GLANCE',
+          metric: 'Measure',
+          result: 'Result',
+          meaning: 'What it means',
+          averageTemperature: 'Average temperature',
+          averageTemperatureMeaning: 'Average from recorded sensor readings.',
+          averageHumidity: 'Average humidity',
+          averageHumidityMeaning: 'Average from recorded sensor readings.',
+          rainfallForecast: 'Expected rainfall (forecast)',
+          rainfallRecorded: 'Recorded rainfall',
+          rainfallForecastMeaning: 'Total across the days currently available in the weather forecast; not a direct rain-gauge measurement.',
+          rainfallRecordedMeaning: 'Total from recorded sensor readings.',
+          diseaseRisk: 'Environmental risk estimate',
+          diseaseRiskMeaning: 'Estimate from environmental history only; not a plant disease diagnosis.',
+          leafScans: 'Leaf disease scans',
+          leafScansMeaning: 'Saved leaf scans in the selected period.',
+          fruitScans: 'Fruit maturity checks',
+          fruitScansMeaning: 'Saved fruit scans in the selected period.',
+          interpretation: 'WHAT DO THESE RECORDS MEAN?',
+          noNarrative: 'No summary is available for this period yet.',
+          dailyRecords: 'DAILY SENSOR RECORDS',
+          forecastDetails: 'WEATHER FORECAST DETAILS',
+          scanTransactions: 'INDIVIDUAL SCAN TRANSACTIONS',
+          scanTransactionsMeaning: 'Each row is one scan actually saved during the selected period.',
+          scanType: 'Scan type',
+          scanResult: 'Result',
+          confidence: 'Confidence',
+          dateAndTime: 'Date and time',
+          imageReference: 'Image file',
+          leafScan: 'Leaf disease',
+          maturityScan: 'Fruit maturity',
+          noImageReference: 'No image name',
+          noScans: 'No saved scans in the selected period.',
+          date: 'Date',
+          temperature: 'Temperature (°C)',
+          humidity: 'Humidity (%)',
+          forecastRainfall: 'Forecast rain (mm)',
+          environmentalRisk: 'Risk estimate (%)',
+          riskNote: 'The risk estimate is not a plant disease diagnosis.',
+          leafBreakdown: 'LEAF SCAN RESULTS',
+          fruitBreakdown: 'FRUIT MATURITY RESULTS',
+          classification: 'Result',
+          count: 'Count',
+          totalScans: 'Total scans',
+          avgConfidence: 'Average confidence',
+          unavailable: 'No data',
+          page: 'Page',
+          of: 'of',
+        };
 
-  const handleDownloadSummary = async () => {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 40;
-    let y = margin;
+    const margin = 42;
+    const tableMargin = { left: margin, right: margin, top: 54, bottom: 48 };
+    const locationLabel = location.trim().replace(/,\s*Philippines$/i, '') || 'Victoria, Oriental Mindoro';
+    const generatedAt = new Intl.DateTimeFormat(isTagalog ? 'fil-PH' : 'en-PH', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'Asia/Manila',
+    }).format(new Date());
+    const formatPdfValue = (value, suffix = '') => {
+      const numericValue = Number(value);
+      return value == null || value === '' || !Number.isFinite(numericValue)
+        ? pdfText.unavailable
+        : `${numericValue.toFixed(1)}${suffix}`;
+    };
+    const riskLabel = isTagalog
+      ? ({ High: 'Mataas', Medium: 'Katamtaman', Low: 'Mababa', 'No data': pdfText.unavailable }[riskUi.label] || riskUi.label)
+      : riskUi.label;
+    const rainfallIsForecast = forecastRainfall.data.length > 0;
+    const rainfallLabel = rainfallIsForecast ? pdfText.rainfallForecast : pdfText.rainfallRecorded;
+    const rainfallMeaning = rainfallIsForecast ? pdfText.rainfallForecastMeaning : pdfText.rainfallRecordedMeaning;
+    const generatedTitle = `${pdfText.title} - RAMBUTECH`;
 
-    // ---------- Header: Logo, Petsa, Period ----------
-    try {
-      // Point this at your actual logo (public/ path or an imported base64 string)
-      doc.addImage('/logo.png', 'PNG', margin, y, 50, 50);
-    } catch (error) {
-      // Logo is optional — continue without it if it fails to load
-    }
+    doc.setProperties({
+      title: generatedTitle,
+      subject: `${locationLabel} - ${rangeLabel}`,
+      author: 'RAMBUTECH Smart Farming System',
+      creator: 'RAMBUTECH',
+    });
+
+    doc.setFillColor(20, 83, 45);
+    doc.rect(0, 0, pageWidth, 112, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor('#0f766e');
-    doc.text('RAMBUTECH Smart Farming System', margin + 60, y + 20);
-
+    doc.setFontSize(21);
+    doc.setTextColor(255, 255, 255);
+    doc.text(pdfText.title, margin, 39);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.setTextColor('#475569');
-    doc.text(`Petsa: ${new Date().toLocaleString('en-PH')}`, margin + 60, y + 36);
-    doc.text(`Period: ${rangeLabel}`, margin + 60, y + 50);
+    doc.setTextColor(226, 245, 233);
+    doc.text(pdfText.subtitle, margin, 58);
+    doc.text(locationLabel, margin, 76);
+    doc.text(`${pdfText.period}: ${rangeLabel}`, margin, 94);
+    doc.text(`${pdfText.generated}: ${generatedAt}`, pageWidth - margin, 94, { align: 'right' });
 
-    y += 72;
-    doc.setDrawColor('#e2e8f0');
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 24;
-
-    // ---------- 1. Key Metrics Cards ----------
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor('#0f172a');
-    doc.text('Key Metrics', margin, y);
-    y += 16;
-
-    const metrics = [
-      { label: 'Avg Temperature', value: formatValue(summary.avgTemperature, ' C') },
-      { label: 'Avg Humidity', value: formatValue(summary.avgHumidity, '%') },
-      { label: 'Total Rainfall', value: formatValue(summary.totalRainfall, ' mm') },
-      { label: 'Disease Risk', value: summary.riskLabel || 'No data' },
-    ];
-
-    const cardWidth = (pageWidth - margin * 2 - 3 * 10) / 4;
-    const cardHeight = 60;
-    metrics.forEach((metric, index) => {
-      const x = margin + index * (cardWidth + 10);
-      doc.setFillColor('#f8fafc');
-      doc.setDrawColor('#e2e8f0');
-      doc.roundedRect(x, y, cardWidth, cardHeight, 6, 6, 'FD');
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor('#64748b');
-      doc.text(metric.label.toUpperCase(), x + 8, y + 18);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.setTextColor('#0f172a');
-      doc.text(String(metric.value), x + 8, y + 40);
-    });
-    y += cardHeight + 28;
-
-    // ---------- 2. Charts (rendered as images, falls back to the data table below) ----------
-    const chartSections = [
-      { ref: temperatureChartRef, title: 'Temperature Trend' },
-      { ref: rainfallChartRef, title: 'Rainfall (Past 7 Days)' },
-      { ref: humidityChartRef, title: 'Humidity (Past 7 Days)' },
-      { ref: leafChartRef, title: 'Leaf Detection Activity' },
-      { ref: fruitChartRef, title: 'Fruit Maturity Activity' },
-    ];
-
-    for (const section of chartSections) {
-      const imgData = await captureChartImage(section.ref);
-
-      if (y > pageHeight - 220) {
+    const sectionHeading = (title, y) => {
+      if (y > pageHeight - 90) {
         doc.addPage();
-        y = margin;
+        y = 62;
       }
-
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
-      doc.setTextColor('#0f172a');
-      doc.text(section.title, margin, y);
-      y += 10;
+      doc.setTextColor(20, 83, 45);
+      doc.text(title, margin, y);
+      return y + 8;
+    };
+    const tableOptions = {
+      margin: tableMargin,
+      styles: {
+        font: 'helvetica',
+        fontSize: 9,
+        cellPadding: 6,
+        textColor: [51, 65, 85],
+        overflow: 'linebreak',
+        valign: 'middle',
+      },
+      headStyles: {
+        fillColor: [20, 83, 45],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+      },
+      alternateRowStyles: { fillColor: [244, 249, 246] },
+      theme: 'grid',
+      showHead: 'everyPage',
+    };
+    let y = 140;
 
-      if (imgData) {
-        const imgWidth = pageWidth - margin * 2;
-        const imgHeight = imgWidth * 0.45;
-        doc.addImage(imgData, 'PNG', margin, y, imgWidth, imgHeight);
-        y += imgHeight + 20;
-      } else {
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(9);
-        doc.setTextColor('#94a3b8');
-        doc.text('Chart unavailable — see data table below.', margin, y + 12);
-        y += 30;
-      }
-    }
-
-    // ---------- 3. Narrative & Insights ----------
-    if (y > pageHeight - 160) {
-      doc.addPage();
-      y = margin;
-    }
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor('#0f172a');
-    doc.text('Narrative & Insights', margin, y);
-    y += 18;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor('#334155');
-    const narrativeText = nlpSummary || 'No whole-system narrative is available yet.';
-    const narrativeLines = doc.splitTextToSize(narrativeText, pageWidth - margin * 2);
-    doc.text(narrativeLines, margin, y);
-    y += narrativeLines.length * 13 + 14;
-
-    insights.forEach((insight) => {
-      const lines = doc.splitTextToSize(`- ${insight}`, pageWidth - margin * 2);
-      if (y > pageHeight - 60) {
-        doc.addPage();
-        y = margin;
-      }
-      doc.text(lines, margin, y);
-      y += lines.length * 13 + 4;
+    y = sectionHeading(pdfText.atGlance, y);
+    autoTable(doc, {
+      ...tableOptions,
+      startY: y,
+      head: [[pdfText.metric, pdfText.result, pdfText.meaning]],
+      body: [
+        [
+          pdfText.averageTemperature,
+          formatPdfValue(summary.avgTemperature, ' °C'),
+          pdfText.averageTemperatureMeaning,
+        ],
+        [
+          pdfText.averageHumidity,
+          formatPdfValue(summary.avgHumidity, '%'),
+          pdfText.averageHumidityMeaning,
+        ],
+        [
+          rainfallLabel,
+          formatPdfValue(displayedRainfallSummary.totalRainfall, ' mm'),
+          rainfallMeaning,
+        ],
+        [pdfText.diseaseRisk, riskLabel, pdfText.diseaseRiskMeaning],
+        [
+          pdfText.leafScans,
+          String(leafSummary.totalScans ?? 0),
+          pdfText.leafScansMeaning,
+        ],
+        [
+          pdfText.fruitScans,
+          String(fruitSummary.totalScans ?? 0),
+          pdfText.fruitScansMeaning,
+        ],
+      ],
+      columnStyles: {
+        0: { cellWidth: 132, fontStyle: 'bold' },
+        1: { cellWidth: 94, halign: 'center', fontStyle: 'bold' },
+      },
     });
+    y = doc.lastAutoTable.finalY + 24;
 
-    y += 14;
+    y = sectionHeading(pdfText.interpretation, y);
+    autoTable(doc, {
+      ...tableOptions,
+      startY: y,
+      body: [[nlpSummary || pdfText.noNarrative]],
+      styles: {
+        ...tableOptions.styles,
+        fillColor: [244, 249, 246],
+        fontSize: 10,
+        cellPadding: 10,
+      },
+    });
+    y = doc.lastAutoTable.finalY + 24;
 
-    // ---------- 4. Data Table ----------
-    if (y > pageHeight - 100) {
-      doc.addPage();
-      y = margin;
-    }
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor('#0f172a');
-    doc.text('Daily Data', margin, y);
+    y = sectionHeading(pdfText.dailyRecords, y);
+    const sensorRowCount = Math.max(temperatureData.length, humidityData.length, diseaseRiskData.length);
+    const sensorDailyRows = Array.from({ length: sensorRowCount }, (_, index) => {
+      const startDate = summary.startDate ? new Date(`${summary.startDate}T00:00:00Z`) : null;
+      let dateLabel =
+        temperatureData[index]?.time
+        || humidityData[index]?.time
+        || diseaseRiskData[index]?.time
+        || pdfText.unavailable;
 
-    const rowCount = Math.max(
-      temperatureData.length,
-      humidityData.length,
-      displayedRainfallData.length,
-      diseaseRiskData.length,
-    );
-    const dailyRows = [];
-    for (let i = 0; i < rowCount; i += 1) {
-      const dateLabel =
-        temperatureData[i]?.time ||
-        humidityData[i]?.time ||
-        displayedRainfallData[i]?.time ||
-        diseaseRiskData[i]?.time ||
-        '';
-      dailyRows.push([
+      if (summary.bucketMode !== 'month' && startDate && !Number.isNaN(startDate.getTime())) {
+        startDate.setUTCDate(startDate.getUTCDate() + index);
+        dateLabel = new Intl.DateTimeFormat(isTagalog ? 'fil-PH' : 'en-PH', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'UTC',
+        }).format(startDate);
+      }
+
+      return [
         dateLabel,
-        temperatureData[i]?.temp ?? 'No data',
-        humidityData[i]?.humidity ?? 'No data',
-        displayedRainfallData[i]?.rainfall ?? 'No data',
-        diseaseRiskData[i]?.risk ?? 'No data',
-      ]);
-    }
+        formatPdfValue(temperatureData[index]?.temp, ' °C'),
+        formatPdfValue(humidityData[index]?.humidity, '%'),
+        formatPdfValue(diseaseRiskData[index]?.risk, '%'),
+      ];
+    });
 
     autoTable(doc, {
-      startY: y + 8,
-      head: [['Date', 'Temp (C)', 'Humidity (%)', 'Rainfall (mm)', 'Disease Risk (%)']],
-      body: dailyRows,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 8, cellPadding: 4 },
-      headStyles: { fillColor: [15, 118, 110] },
-      theme: 'striped',
+      ...tableOptions,
+      startY: y,
+      head: [[pdfText.date, pdfText.temperature, pdfText.humidity, pdfText.environmentalRisk]],
+      body: sensorDailyRows,
+      columnStyles: {
+        0: { cellWidth: 90 },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'center' },
+      },
+      didDrawPage: () => {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(pdfText.riskNote, margin, pageHeight - 34);
+      },
     });
+    y = doc.lastAutoTable.finalY + 24;
 
-    let finalY = doc.lastAutoTable.finalY + 24;
-
-    if (leafLabelBreakdown.length) {
-      if (finalY > pageHeight - 100) {
-        doc.addPage();
-        finalY = margin;
-      }
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor('#0f172a');
-      doc.text('Leaf Detection Breakdown', margin, finalY);
+    if (rainfallIsForecast) {
+      y = sectionHeading(pdfText.forecastDetails, y);
       autoTable(doc, {
-        startY: finalY + 8,
-        head: [['Label', 'Count']],
-        body: leafLabelBreakdown.map((item) => [item.label, item.count]),
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 8, cellPadding: 4 },
-        headStyles: { fillColor: [16, 185, 129] },
-        theme: 'striped',
+        ...tableOptions,
+        startY: y,
+        head: [[pdfText.date, pdfText.forecastRainfall]],
+        body: displayedRainfallData.map((record) => [
+          record.date || record.time || pdfText.unavailable,
+          formatPdfValue(record.rainfall, ' mm'),
+        ]),
+        columnStyles: { 1: { halign: 'center', cellWidth: 150 } },
       });
-      finalY = doc.lastAutoTable.finalY + 24;
+      y = doc.lastAutoTable.finalY + 24;
     }
 
-    if (fruitLabelBreakdown.length) {
-      if (finalY > pageHeight - 100) {
-        doc.addPage();
-        finalY = margin;
-      }
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor('#0f172a');
-      doc.text('Fruit Maturity Breakdown', margin, finalY);
-      autoTable(doc, {
-        startY: finalY + 8,
-        head: [['Label', 'Count']],
-        body: fruitLabelBreakdown.map((item) => [item.label, item.count]),
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 8, cellPadding: 4 },
-        headStyles: { fillColor: [249, 115, 22] },
-        theme: 'striped',
+    y = sectionHeading(pdfText.scanTransactions, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(pdfText.scanTransactionsMeaning, margin, y);
+    y += 14;
+    const scanDateFormatter = new Intl.DateTimeFormat(isTagalog ? 'fil-PH' : 'en-PH', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'Asia/Manila',
+    });
+    const scanRows = [...predictionRecords]
+      .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))
+      .map((record) => {
+        const scanDate = new Date(record.createdAt);
+        const dateLabel = Number.isNaN(scanDate.getTime())
+          ? pdfText.unavailable
+          : scanDateFormatter.format(scanDate);
+        const typeLabel = record.type === 'leaf'
+          ? pdfText.leafScan
+          : record.type === 'rambutan'
+            ? pdfText.maturityScan
+            : String(record.type || pdfText.unavailable);
+        const normalizedLabel = String(record.label || pdfText.unavailable);
+        const resultLabel = isTagalog && record.type === 'rambutan'
+          ? ['mature', 'ripe'].includes(normalizedLabel.toLowerCase())
+            ? 'Hinog'
+            : ['immature', 'unripe'].includes(normalizedLabel.toLowerCase())
+              ? 'Hilaw'
+              : normalizedLabel
+          : normalizedLabel;
+        const imagePath = String(record.imageName || '');
+        const imageName = imagePath.split(/[\\/]/).pop() || pdfText.noImageReference;
+        const compactImageName = imageName.length > 32
+          ? `${imageName.slice(0, 14)}...${imageName.slice(-12)}`
+          : imageName;
+        return [
+          dateLabel,
+          typeLabel,
+          resultLabel,
+          formatPdfValue(record.confidence, '%'),
+          compactImageName,
+        ];
       });
+
+    autoTable(doc, {
+      ...tableOptions,
+      startY: y,
+      head: [[pdfText.dateAndTime, pdfText.scanType, pdfText.scanResult, pdfText.confidence, pdfText.imageReference]],
+      body: scanRows.length
+        ? scanRows
+        : [[{ content: pdfText.noScans, colSpan: 5, styles: { halign: 'center' } }]],
+      columnStyles: {
+        0: { cellWidth: 105 },
+        1: { cellWidth: 88 },
+        2: { cellWidth: 110 },
+        3: { cellWidth: 67, halign: 'center' },
+        4: { cellWidth: 99 },
+      },
+    });
+    y = doc.lastAutoTable.finalY + 24;
+
+    const addBreakdown = (title, summaryData, breakdown, color) => {
+      if (!breakdown.length) return;
+      y = sectionHeading(title, y);
+      autoTable(doc, {
+        ...tableOptions,
+        startY: y,
+        head: [[pdfText.classification, pdfText.count]],
+        body: breakdown.map((item) => {
+          const label = String(item.label || pdfText.unavailable);
+          const translatedLabel = isTagalog && ['mature', 'ripe'].includes(label.toLowerCase())
+            ? 'Hinog'
+            : isTagalog && ['immature', 'unripe'].includes(label.toLowerCase())
+              ? 'Hilaw'
+              : label;
+          return [translatedLabel, String(item.count ?? 0)];
+        }),
+        headStyles: { ...tableOptions.headStyles, fillColor: color },
+        columnStyles: { 1: { halign: 'center', cellWidth: 100 } },
+      });
+      y = doc.lastAutoTable.finalY + 8;
+      if (y > pageHeight - 55) {
+        doc.addPage();
+        y = 62;
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      const confidence = formatPdfValue(summaryData.avgConfidence, '%');
+      doc.text(
+        `${pdfText.totalScans}: ${summaryData.totalScans ?? 0}  |  ${pdfText.avgConfidence}: ${confidence}`,
+        margin,
+        y,
+      );
+      y += 20;
+    };
+
+    addBreakdown(pdfText.leafBreakdown, leafSummary, leafLabelBreakdown, [16, 185, 129]);
+    addBreakdown(pdfText.fruitBreakdown, fruitSummary, fruitLabelBreakdown, [234, 88, 12]);
+
+    const pageCount = doc.getNumberOfPages();
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+      doc.setPage(pageNumber);
+      if (pageNumber > 1) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(20, 83, 45);
+        doc.text(`${generatedTitle} | ${rangeLabel}`, margin, 30);
+      }
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, pageHeight - 24, pageWidth - margin, pageHeight - 24);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`${pdfText.page} ${pageNumber} ${pdfText.of} ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
     }
 
     doc.save(`historical-summary-${timeRange}.pdf`);
@@ -1112,7 +1335,11 @@ export default function HistoricalData({ location = '' }) {
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">{language === 'tl' ? 'Mga Naka-save na Scan' : 'AI Scan Transactions'}</p>
               <div className="mt-2.5 flex items-baseline gap-2">
-                <span className="font-display text-[28px] font-bold leading-none text-slate-900">{(leafSummary.totalScans ?? 0) + (fruitSummary.totalScans ?? 0)}</span>
+                <span className="font-display text-[28px] font-bold leading-none text-slate-900">
+                  {savedPredictionCounts
+                    ? savedPredictionCounts.leaf + savedPredictionCounts.maturity
+                    : '—'}
+                </span>
                 <span className="text-xs font-medium text-slate-500">{language === 'tl' ? 'naka-save na scan' : 'saved scans'}</span>
               </div>
             </div>
@@ -1121,9 +1348,14 @@ export default function HistoricalData({ location = '' }) {
             </span>
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-[11px] font-semibold text-slate-700">
-            <span className="rounded-full border border-[#E2ECE6] bg-[#F8FAF9] px-2.5 py-1">Leaf: {leafSummary.totalScans ?? 0}</span>
-            <span className="rounded-full border border-[#E2ECE6] bg-[#F8FAF9] px-2.5 py-1">Fruit: {fruitSummary.totalScans ?? 0}</span>
+            <span className="rounded-full border border-[#E2ECE6] bg-[#F8FAF9] px-2.5 py-1">Leaf: {savedPredictionCounts?.leaf ?? '—'}</span>
+            <span className="rounded-full border border-[#E2ECE6] bg-[#F8FAF9] px-2.5 py-1">Fruit: {savedPredictionCounts?.maturity ?? '—'}</span>
           </div>
+          {savedPredictionCountsError && (
+            <p role="status" className="mt-2 text-xs text-amber-800">
+              {savedPredictionCounts ? t.scanCountsStale : t.scanCountsUnavailable}
+            </p>
+          )}
         </article>
       </section>
 
@@ -1167,7 +1399,7 @@ export default function HistoricalData({ location = '' }) {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div ref={temperatureChartRef} className="h-[260px] w-full sm:h-[350px]">
+                        <div className="h-[260px] w-full sm:h-[350px]">
                         <ResponsiveContainer key={`temperature-${chartRenderKey}`} width="100%" height="100%">
                           <AreaChart data={temperatureData}>
                             <defs>
@@ -1235,7 +1467,7 @@ export default function HistoricalData({ location = '' }) {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div ref={rainfallChartRef} className="h-[260px] w-full sm:h-[350px]">
+                        <div className="h-[260px] w-full sm:h-[350px]">
                         <ResponsiveContainer key={`rainfall-${chartRenderKey}`} width="100%" height="100%">
                           <BarChart data={displayedRainfallData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1286,7 +1518,7 @@ export default function HistoricalData({ location = '' }) {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div ref={humidityChartRef} className="h-[260px] w-full sm:h-[350px]">
+                        <div className="h-[260px] w-full sm:h-[350px]">
                         <ResponsiveContainer key={`humidity-${chartRenderKey}`} width="100%" height="100%">
                           <AreaChart data={humidityData}>
                             <defs>
@@ -1399,7 +1631,7 @@ export default function HistoricalData({ location = '' }) {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="min-w-0 px-6 py-6 sm:px-7 sm:py-7">
-                        <div ref={leafChartRef} className="h-[260px] w-full min-w-0 sm:h-[320px]">
+                        <div className="h-[260px] w-full min-w-0 sm:h-[320px]">
                         <ResponsiveContainer key={`leaf-${chartRenderKey}`} width="100%" height="100%">
                           <BarChart data={leafDetectionData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1467,7 +1699,7 @@ export default function HistoricalData({ location = '' }) {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="min-w-0 px-6 py-6 sm:px-7 sm:py-7">
-                        <div ref={fruitChartRef} className="h-[260px] w-full min-w-0 sm:h-[320px]">
+                        <div className="h-[260px] w-full min-w-0 sm:h-[320px]">
                         <ResponsiveContainer key={`fruit-${chartRenderKey}`} width="100%" height="100%">
                           <BarChart data={fruitMaturityData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1646,7 +1878,7 @@ export default function HistoricalData({ location = '' }) {
               <Leaf3D className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110" />
               <span>{language === 'tl' ? 'Mga Scan ng Sakit sa Dahon' : 'Leaf Disease Scans'}</span>
               <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] leading-none text-slate-700 group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white">
-                {savedPredictionCounts?.leaf ?? leafSummary.totalScans ?? 0}
+                {savedPredictionCounts?.leaf ?? '—'}
               </span>
             </TabsTrigger>
             <TabsTrigger
@@ -1656,7 +1888,7 @@ export default function HistoricalData({ location = '' }) {
               <Rambutan3D className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110" />
               <span>{language === 'tl' ? 'Mga Scan ng Pagkahinog' : 'Maturity Assessment Scans'}</span>
               <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] leading-none text-slate-700 group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white">
-                {savedPredictionCounts?.maturity ?? fruitSummary.totalScans ?? 0}
+                {savedPredictionCounts?.maturity ?? '—'}
               </span>
             </TabsTrigger>
           </TabsList>
