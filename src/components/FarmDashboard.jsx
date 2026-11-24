@@ -19,7 +19,6 @@ import {
 import { LanguageContext } from '../LanguageContext';
 import { apiFetch } from '../lib/apiFetch.mjs';
 import { analyzeDashboardTrend, dashboardTrendSummary } from '../lib/dashboardTrends.mjs';
-import { FARM_HARVEST_REFERENCE } from '../lib/maturityAdvice.mjs';
 import { sensorSnapshot } from '../lib/sensorReadings.mjs';
 import { readSessionData, writeSessionData } from '../lib/sessionDataCache.mjs';
 import { useWeather } from '../hooks/useWeather';
@@ -942,45 +941,6 @@ export default function FarmDashboard({ farmerName, location, notifications = []
           </button>
         </article>
 
-        <article className="rounded-3xl border border-stone-200 bg-white p-5 sm:p-6">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#57534E]">{isTagalog ? 'Sanggunian sa ani' : 'Harvest reference'}</p>
-          <h3 className="mt-1 font-extrabold text-lg text-[#1C1917]">{FARM_HARVEST_REFERENCE.harvestSeason}</h3>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-2xl bg-[#FAF9F5] p-3">
-              <span className="block text-[#57534E]">{isTagalog ? 'Flowering' : 'Flowering period'}</span>
-              <strong className="mt-1 block text-sm text-[#1C1917]">{isTagalog ? 'Bandang Hulyo' : 'Around July'}</strong>
-            </div>
-            <div className="rounded-2xl bg-[#FAF9F5] p-3">
-              <span className="block text-[#57534E]">{isTagalog ? 'Season ng ani' : 'Harvest season'}</span>
-              <strong className="mt-1 block text-sm text-[#1C1917]">{FARM_HARVEST_REFERENCE.harvestSeason}</strong>
-            </div>
-          </div>
-          <p className="mt-3 text-xs leading-relaxed text-[#57534E]">
-            {isTagalog
-              ? 'Hindi kinakalkula ang araw ng ani mula sa 8-buwang cycle; kailangan munang mapatunayan ang kaugnayan nito sa annual season.'
-              : 'Harvest dates are not calculated from the 8-month cycle until its relationship to the annual harvest season is validated.'}
-          </p>
-        </article>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6" aria-labelledby="dashboard-recommendations-title">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#14532D]">
-            <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-          </span>
-          <div>
-            <h3 id="dashboard-recommendations-title" className="font-extrabold text-lg text-[#1C1917]">
-              {isTagalog ? 'Mga susunod na hakbang' : 'Recommended next steps'}
-            </h3>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              {integratedRecommendations.map((recommendation) => (
-                <p key={recommendation} className="rounded-2xl border border-emerald-100 bg-white/80 p-3 text-sm leading-relaxed text-[#1C1917]">
-                  {recommendation}
-                </p>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -1099,6 +1059,25 @@ export default function FarmDashboard({ farmerName, location, notifications = []
               <RefreshCw className="h-4 w-4 text-[#14532D]" aria-hidden="true" />{isTagalog ? 'I-refresh' : 'Refresh'}
             </button>
           </div>
+          <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4" aria-labelledby="dashboard-recommendations-title">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#14532D]">
+                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h3 id="dashboard-recommendations-title" className="font-extrabold text-base text-[#1C1917]">
+                  {isTagalog ? 'Mga susunod na hakbang' : 'Recommended next steps'}
+                </h3>
+                <div className="mt-3 space-y-2">
+                  {integratedRecommendations.map((recommendation) => (
+                    <p key={recommendation} className="rounded-xl border border-emerald-100 bg-white/80 p-3 text-sm leading-relaxed text-[#1C1917]">
+                      {recommendation}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
         </section>
       </div>
 

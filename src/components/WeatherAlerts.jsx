@@ -585,9 +585,6 @@ export function WeatherAlerts({ isActive = true }) {
                   </span>
                   <span className="font-bold text-sm text-sky-800">{currentCondition}</span>
                 </div>
-                <p className="mt-1 text-xs text-[#57534E]">
-                  {lang === 'tl' ? 'Weather code' : 'WMO weather code'}: {currentWeather.weatherCode ?? (lang === 'tl' ? 'Hindi available' : 'Unavailable')}
-                </p>
               </section>
             </div>
             <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-stone-200 ${getWeatherBackground(currentCondition)} ${getWeatherIconColor(currentCondition)}`}>

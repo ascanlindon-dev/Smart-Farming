@@ -12,7 +12,7 @@ const translations = {
   en: {
     title: 'Actual Harvest Records',
     history: 'Past harvests',
-    description: 'Record harvests that have already happened. Past dates are reference only and do not change a CNN result.',
+    description: 'Record harvests that have already happened.',
     harvestDate: 'Harvest date',
     notes: 'Notes (optional)',
     notesPlaceholder: 'For example, fruit condition or harvest observations',
@@ -26,13 +26,12 @@ const translations = {
     loading: 'Loading harvest records...',
     empty: 'No harvest dates recorded yet.',
     linked: (id, label) => `Linked to assessment #${id} (${label})`,
-    notLinked: 'Farm harvest record; not linked to an assessment',
     refresh: 'Retry',
   },
   tl: {
     title: 'Mga Aktuwal na Tala ng Pag-ani',
     history: 'Mga nakaraang anihan',
-    description: 'Itala ang mga anihang naganap na. Sanggunian lamang ang mga dating petsa at hindi nito binabago ang resulta ng CNN.',
+    description: 'Itala ang mga anihang naganap na.',
     harvestDate: 'Petsa ng pag-ani',
     notes: 'Mga tala (opsyonal)',
     notesPlaceholder: 'Halimbawa, kondisyon ng bunga o obserbasyon sa pag-ani',
@@ -46,7 +45,6 @@ const translations = {
     loading: 'Kinukuha ang mga tala ng pag-ani...',
     empty: 'Wala pang naitalang petsa ng pag-ani.',
     linked: (id, label) => `Naka-link sa assessment #${id} (${label})`,
-    notLinked: 'Tala ng ani sa bukid; hindi naka-link sa assessment',
     refresh: 'Subukan muli',
   },
 };
@@ -234,11 +232,11 @@ export default function HarvestRecords({ predictionId = null }) {
                       <p className="font-semibold text-slate-900">
                         {formatHarvestDate(record.harvest_date, language)}
                       </p>
-                      <p className="mt-1 text-xs text-slate-600">
-                        {record.prediction
-                          ? t.linked(record.prediction.id, linkedLabel)
-                          : t.notLinked}
-                      </p>
+                      {record.prediction && (
+                        <p className="mt-1 text-xs text-slate-600">
+                          {t.linked(record.prediction.id, linkedLabel)}
+                        </p>
+                      )}
                       {record.notes && <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{record.notes}</p>}
                     </li>
                   );

@@ -81,9 +81,6 @@ export default function MaturityDetection({ onAnalysisComplete }) {
       title: 'CNN Fruit Maturity Assessment',
       analysisDesc: 'Existing CNN classification and guidance for the photographed fruit.',
       confidenceNA: 'Confidence unavailable',
-      usualHarvestPeriod: 'Usual harvest period reported for this farm',
-      usualHarvestNote: 'Season is context only. It does not determine the CNN result or mean the whole farm is ready.',
-      seasonIsContext: 'Context only',
       assessmentImageAlt: 'Fruit image used for this maturity assessment',
       recommendationSource: 'Guidance based on the CNN classification',
       recommendationDisclaimer: 'General monitoring guidance only. A ripe result applies to this photographed fruit, not the whole tree or farm.',
@@ -100,9 +97,6 @@ export default function MaturityDetection({ onAnalysisComplete }) {
       title: 'Pagsusuri ng Pagkahinog Gamit ang CNN',
       analysisDesc: 'Resulta ng kasalukuyang CNN at gabay para sa bungang nasa larawan.',
       confidenceNA: 'Hindi available ang kumpiyansa',
-      usualHarvestPeriod: 'Karaniwang panahon ng anihan na iniulat para sa bukid',
-      usualHarvestNote: 'Sanggunian lamang ang panahon. Hindi nito binabago ang resulta ng CNN o nangangahulugang handa nang anihin ang buong bukid.',
-      seasonIsContext: 'Sanggunian lamang',
       assessmentImageAlt: 'Larawan ng bungang sinuri para sa pagkahinog',
       recommendationSource: 'Gabay batay sa resulta ng CNN',
       recommendationDisclaimer: 'Pangkalahatang gabay lamang ito. Para lamang sa bungang nasa larawan ang resultang hinog, hindi sa buong puno o bukid.',
@@ -601,21 +595,6 @@ export default function MaturityDetection({ onAnalysisComplete }) {
           </CardContent>
         </Card>
       </div>
-
-      <Card className="border border-amber-100 bg-gradient-to-r from-amber-50 to-white shadow-sm">
-        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
-          <div>
-            <CardTitle className="text-sm text-slate-900">{t.harvestReference}</CardTitle>
-            <p className="mt-1 text-sm font-semibold text-amber-900">
-              {t.usualHarvestPeriod}: {FARM_HARVEST_REFERENCE.harvestSeason}
-            </p>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{t.usualHarvestNote}</p>
-          </div>
-          <Badge variant="secondary" className="w-fit shrink-0 bg-white text-amber-900">
-            {t.seasonIsContext}
-          </Badge>
-        </CardContent>
-      </Card>
 
       <PredictionTransactions
         key={historyRevision}
