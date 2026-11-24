@@ -2,6 +2,7 @@ import { apiFetch } from '../lib/apiFetch.mjs';
 import { useState, useRef, useContext, useEffect } from 'react';
 import { FARM_HARVEST_REFERENCE, maturityAdvice, maturityReadiness } from '../lib/maturityAdvice.mjs';
 import ScanSaveStatus from './ScanSaveStatus';
+import PredictionTransactions from './PredictionTransactions';
 import HarvestRecords from './HarvestRecords';
 import { LanguageContext } from '../LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -31,6 +32,7 @@ export default function MaturityDetection({ onAnalysisComplete }) {
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
+  const [historyRevision, setHistoryRevision] = useState(0);
 
   useEffect(() => () => stream?.getTracks().forEach((track) => track.stop()), [stream]);
 
@@ -353,6 +355,7 @@ export default function MaturityDetection({ onAnalysisComplete }) {
         };
 
         setResult(out);
+        setHistoryRevision((value) => value + 1);
         setIsAnalyzing(false);
         if (typeof onAnalysisComplete === 'function') onAnalysisComplete(out);
 
@@ -614,6 +617,11 @@ export default function MaturityDetection({ onAnalysisComplete }) {
         </CardContent>
       </Card>
 
+      <PredictionTransactions
+        key={historyRevision}
+        predictionType="rambutan"
+        viewMode="timeline"
+      />
       <HarvestRecords predictionId={result && !result.canRetry ? result.predictionId : null} />
 
       {/* Harvesting Recommendations - hidden for notRambutan */}
